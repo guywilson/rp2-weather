@@ -5,7 +5,7 @@
 #include "serial_rp2040.h"
 
 void irqTx(void) {
-
+    //
 }
 
 void irqRx(void) {

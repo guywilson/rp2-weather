@@ -26,12 +26,13 @@ add_compile_options(-Wall
         )
 
 if (PICO_ON_DEVICE)
-    add_executable(sched_blink
+    add_executable(rp2-weather
             src/main.c
             src/scheduler.c
             src/rtc_rp2040.c
             src/serial_rp2040.c
             src/error_rp2040.c
+            src/i2c_rp2040.c
             src/heartbeat.c
             src/debug.c
             src/led_utils.c
@@ -40,11 +41,11 @@ if (PICO_ON_DEVICE)
     # Disable SDK alarm support for this lowlevel example
     set(PICO_TIME_DEFAULT_ALARM_POOL_DISABLED 1)
 
-    target_link_libraries(sched_blink pico_stdlib pico_multicore)
+    target_link_libraries(rp2-weather pico_stdlib pico_multicore hardware_i2c hardware_uart)
 
     # create map/bin/hex file etc.
-    pico_add_extra_outputs(sched_blink)
+    pico_add_extra_outputs(rp2-weather)
 
     # add url via pico_set_program_url
-    example_auto_set_url(sched_blink)
+    example_auto_set_url(rp2-weather)
 endif ()
