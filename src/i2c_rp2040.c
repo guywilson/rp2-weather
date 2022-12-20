@@ -107,7 +107,15 @@ void i2cWrite(uint8_t addr, uint8_t * data, int length) {
     i2c0->hw->intr_mask |= I2C_IC_INTR_MASK_M_TX_EMPTY_BITS;
 }
 
-void i2cRead(uint8_t addr, uint8_t * data) {
+void i2cWriteByte(uint8_t addr, uint8_t data) {
+    i2c0->hw->enable = 0;
+    i2c0->hw->tar = addr;
+    i2c0->hw->enable = 1;
+
+    i2c0->hw->data_cmd = data;
+}
+
+void i2cRead(uint8_t addr) {
     i2c0->hw->enable = 0;
     i2c0->hw->tar = addr;
     i2c0->hw->enable = 1;

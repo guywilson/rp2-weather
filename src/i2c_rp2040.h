@@ -27,6 +27,7 @@ I2C_RX;
 
 void setupI2C(i2c_baud baud);
 void i2cWrite(uint8_t addr, uint8_t * data, int length);
-void i2cRead(uint8_t addr, uint8_t * data);
+void i2cWriteByte(uint8_t addr, uint8_t data);
+void i2cRead(uint8_t addr);
 
 #endif
