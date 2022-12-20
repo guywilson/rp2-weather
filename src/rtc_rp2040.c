@@ -12,7 +12,7 @@
 
 #define RTC_INTERRUPT_CYCLE             100U
 
-static void iqrTimerAlarm() {
+static void irqTimerAlarm() {
     // Clear the alarm irq
     hw_clear_bits(&timer_hw->intr, 1u << ALARM_NUM);
 
@@ -27,7 +27,7 @@ void setupRTC() {
     // Enable the interrupt for our alarm (the timer outputs 4 alarm irqs)
     hw_set_bits(&timer_hw->inte, 1u << ALARM_NUM);
     // Set irq handler for alarm irq
-    irq_set_exclusive_handler(TIMER_IRQ_0, iqrTimerAlarm);
+    irq_set_exclusive_handler(TIMER_IRQ_0, irqTimerAlarm);
     // Enable the alarm irq
     irq_set_enabled(ALARM_IRQ, true);
     // Enable interrupt in block and at processor

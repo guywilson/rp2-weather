@@ -19,4 +19,14 @@ typedef enum {
 }
 i2c_baud;
 
+typedef struct {
+    uint8_t *       buffer;
+    int             bufferLen;
+}
+I2C_RX;
+
+void setupI2C(i2c_baud baud);
+void i2cWrite(uint8_t addr, uint8_t * data, int length);
+void i2cRead(uint8_t addr, uint8_t * data);
+
 #endif

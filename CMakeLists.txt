@@ -33,6 +33,7 @@ if (PICO_ON_DEVICE)
             src/serial_rp2040.c
             src/error_rp2040.c
             src/i2c_rp2040.c
+            src/i2ctask.c
             src/heartbeat.c
             src/debug.c
             src/led_utils.c

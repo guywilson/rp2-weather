@@ -11,9 +11,11 @@
 #include "hardware/uart.h"
 #include "rtc_rp2040.h"
 #include "serial_rp2040.h"
+#include "i2c_rp2040.h"
 #include "heartbeat.h"
 #include "watchdog.h"
 #include "debug.h"
+#include "i2ctask.h"
 #include "led_utils.h"
 
 void watchdog_disable(void) {
@@ -29,7 +31,7 @@ void setup(void) {
 
 	setupLEDPin();
 	setupRTC();
-
+	setupI2C(I2C_BAUD_200KHZ);
 	setupSerial();
 }
 
@@ -42,15 +44,22 @@ int main(void) {
 		turnOff(LED_ONBOARD);
 	}
 
-	initScheduler(3);
+	initScheduler(5);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &WatchdogTask);
 	registerTask(TASK_DEBUG, &TaskDebug);
+	registerTask(TASK_TEMP_RESULT, &TempResultTask);
+	registerTask(TASK_TEMP_TRIGGER, &TempTriggerTask);
 
 	scheduleTaskOnce(
 			TASK_HEARTBEAT,
 			rtc_val_ms(950),
+			NULL);
+
+	scheduleTaskOnce(
+			TASK_TEMP_TRIGGER,
+			rtc_val_sec(1),
 			NULL);
 
 	scheduleTask(
