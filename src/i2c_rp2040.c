@@ -9,23 +9,22 @@
 #include "taskdef.h"
 #include "i2c_rp2040.h"
 
-static uint8_t          txBuffer[32];
-static int              txIndex = 0;
-static int              txBufferLen = 0;
+#define IRQ_REASON_I2C0_TX_EMPTY            0x01
+#define IRQ_REASON_I2C0_RX_FULL             0x02
+#define IRQ_REASON_I2C1_TX_EMPTY            0x04
+#define IRQ_REASON_I2C1_RX_FULL             0x08
 
-static uint8_t          rxBuffer[32];
-static int              rxIndex = 0;
-
+I2C_device              i2cDevices[2];
 I2C_RX                  rxStruct;
 
-void irqI2CHandler() {
+void irqI2C0Handler() {
     if (i2c0->hw->raw_intr_stat & I2C_IC_INTR_STAT_R_TX_EMPTY_BITS) {
         /*
         ** TX complete, send the next byte...
         */
-        i2c0->hw->data_cmd = txBuffer[txIndex++];
+        i2c0->hw->data_cmd = i2cDevices[0].txBuffer[i2cDevices[0].txIndex++];
 
-        if (txIndex == txBufferLen) {
+        if (i2cDevices[0].txIndex == i2cDevices[0].txBufferLen) {
             /*
             ** Mask the interrupt...
             */
@@ -34,7 +33,7 @@ void irqI2CHandler() {
     }
     else if (i2c0->hw->raw_intr_stat & I2C_IC_INTR_STAT_R_RX_FULL_BITS) {
         if (i2c0->hw->rxflr) {
-            rxBuffer[rxIndex++] = i2c0->hw->data_cmd;
+            i2cDevices[0].rxBuffer[i2cDevices[0].rxIndex++] = i2c0->hw->data_cmd;
         }
         else {
             /*
@@ -42,12 +41,48 @@ void irqI2CHandler() {
             */
             i2c0->hw->intr_mask &= !I2C_IC_INTR_MASK_M_RX_FULL_BITS;
 
-            rxStruct.buffer = rxBuffer;
-            rxStruct.bufferLen = rxIndex;
+            rxStruct.buffer = i2cDevices[0].rxBuffer;
+            rxStruct.bufferLen = i2cDevices[0].rxIndex;
 
             scheduleTaskOnce(TASK_TEMP_RESULT, RUN_NOW, &rxStruct);
         }
     }
+}
+
+void irqI2C1Handler() {
+    if (i2c1->hw->raw_intr_stat & I2C_IC_INTR_STAT_R_RX_FULL_BITS) {
+        /*
+        ** TX complete, send the next byte...
+        */
+        i2c1->hw->data_cmd = i2cDevices[1].txBuffer[i2cDevices[1].txIndex++];
+
+        if (i2cDevices[1].txIndex == i2cDevices[1].txBufferLen) {
+            /*
+            ** Mask the interrupt...
+            */
+            i2c1->hw->intr_mask &= !I2C_IC_INTR_MASK_M_TX_EMPTY_BITS;
+        }
+    }
+    else if (i2c1->hw->raw_intr_stat & I2C_IC_INTR_STAT_R_RX_FULL_BITS) {
+        if (i2c1->hw->rxflr) {
+            i2cDevices[1].rxBuffer[i2cDevices[1].rxIndex++] = i2c1->hw->data_cmd;
+        }
+        else {
+            /*
+            ** Mask the interrupt...
+            */
+            i2c1->hw->intr_mask &= !I2C_IC_INTR_MASK_M_RX_FULL_BITS;
+
+            rxStruct.buffer = i2cDevices[1].rxBuffer;
+            rxStruct.bufferLen = i2cDevices[1].rxIndex;
+
+            scheduleTaskOnce(TASK_TEMP_RESULT, RUN_NOW, &rxStruct);
+        }
+    }
+}
+
+void setupTMP117() {
+	i2c_init(i2c0, 200000);
 }
 
 void setupI2C(i2c_baud baud) {
@@ -78,16 +113,19 @@ void setupI2C(i2c_baud baud) {
                     I2C_SDA_HOLD << I2C_IC_SDA_HOLD_IC_SDA_TX_HOLD_LSB,
                     I2C_IC_SDA_HOLD_IC_SDA_TX_HOLD_BITS);
 
+    // Always enable the DREQ signalling -- harmless if DMA isn't listening
+    i2c0->hw->dma_cr = I2C_IC_DMA_CR_TDMAE_BITS | I2C_IC_DMA_CR_RDMAE_BITS;
+
     i2c0->hw->enable = 1;
 
-    irq_set_exclusive_handler(I2C0_IRQ, irqI2CHandler);
+    // irq_set_exclusive_handler(I2C0_IRQ, irqI2C0Handler);
 
-    /*
-    ** Unmask the TX_EMPTY & RX_FULL interrupts...
-    */
-    i2c0->hw->intr_mask |= 
-        (I2C_IC_INTR_MASK_M_TX_EMPTY_BITS | 
-        I2C_IC_INTR_MASK_M_RX_FULL_BITS);
+    // /*
+    // ** Unmask the TX_EMPTY & RX_FULL interrupts...
+    // */
+    // i2c0->hw->intr_mask |= 
+    //     (I2C_IC_INTR_MASK_M_TX_EMPTY_BITS | 
+    //     I2C_IC_INTR_MASK_M_RX_FULL_BITS);
 }
 
 void i2cWrite(uint8_t addr, uint8_t * data, int length) {
@@ -95,11 +133,11 @@ void i2cWrite(uint8_t addr, uint8_t * data, int length) {
     i2c0->hw->tar = addr;
     i2c0->hw->enable = 1;
 
-    memcpy(txBuffer, data, length);
+    memcpy(i2cDevices[0].txBuffer, data, length);
 
-    txIndex = 0;
-    txBufferLen = length;
-    i2c0->hw->data_cmd = txBuffer[txIndex++];
+    i2cDevices[0].txIndex = 0;
+    i2cDevices[0].txBufferLen = length;
+    i2c0->hw->data_cmd = i2cDevices[0].txBuffer[i2cDevices[0].txIndex++];
 
     /*
     ** Unmask the TX_EMPTY interrupt...

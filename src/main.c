@@ -9,6 +9,7 @@
 #include "pico/stdlib.h"
 #include "hardware/watchdog.h"
 #include "hardware/uart.h"
+#include "hardware/i2c.h"
 #include "rtc_rp2040.h"
 #include "serial_rp2040.h"
 #include "i2c_rp2040.h"
@@ -31,7 +32,8 @@ void setup(void) {
 
 	setupLEDPin();
 	setupRTC();
-	setupI2C(I2C_BAUD_200KHZ);
+	//setupI2C(I2C_BAUD_200KHZ);
+	setupTMP117();
 	setupSerial();
 }
 
@@ -44,22 +46,23 @@ int main(void) {
 		turnOff(LED_ONBOARD);
 	}
 
-	initScheduler(5);
+	initScheduler(6);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &WatchdogTask);
 	registerTask(TASK_DEBUG, &TaskDebug);
-	registerTask(TASK_TEMP_RESULT, &TempResultTask);
-	registerTask(TASK_TEMP_TRIGGER, &TempTriggerTask);
+//	registerTask(TASK_TEMP_RESULT, &TempResultTask);
+	registerTask(TASK_TEMP_TRIGGER, &TaskTriggerTemp);
+	registerTask(TASK_TEMP_READ, &TaskReadTemp);
 
 	scheduleTaskOnce(
 			TASK_HEARTBEAT,
 			rtc_val_ms(950),
 			NULL);
 
-	scheduleTaskOnce(
+	scheduleTask(
 			TASK_TEMP_TRIGGER,
-			rtc_val_sec(1),
+			rtc_val_sec(5),
 			NULL);
 
 	scheduleTask(
@@ -67,10 +70,10 @@ int main(void) {
 			rtc_val_ms(50), 
 			NULL);
 
-	scheduleTask(
-			TASK_DEBUG,
-			rtc_val_sec(1),
-			NULL);
+	// scheduleTask(
+	// 		TASK_DEBUG,
+	// 		rtc_val_sec(1),
+	// 		NULL);
 
 	/*
 	** Enable the watchdog, it will reset the device in 100ms unless

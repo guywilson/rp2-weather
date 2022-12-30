@@ -5,6 +5,14 @@
 
 #define I2C_SDA_HOLD                38
 
+#define TMP117_ADDRESS                  0x48
+
+#define TMP117_REG_CONFIG               0x01
+#define TMP117_REG_TEMP                 0x00
+#define TMP117_REG_TEMP_OFFSET          0x07
+#define TMP117_REG_DEVICE_ID            0x0F
+
+
 typedef enum {
     I2C_BAUD_1KHZ   = 0xC35024F8,
     I2C_BAUD_2KHZ   = 0x61A8927C,
@@ -20,11 +28,22 @@ typedef enum {
 i2c_baud;
 
 typedef struct {
-    uint8_t *       buffer;
-    int             bufferLen;
+    volatile uint8_t    txBuffer[32];
+    volatile int        txIndex;
+    int                 txBufferLen;
+
+    volatile uint8_t    rxBuffer[32];
+    volatile int        rxIndex;
+}
+I2C_device;
+
+typedef struct {
+    volatile uint8_t *  buffer;
+    volatile int        bufferLen;
 }
 I2C_RX;
 
+void setupTMP117();
 void setupI2C(i2c_baud baud);
 void i2cWrite(uint8_t addr, uint8_t * data, int length);
 void i2cWriteByte(uint8_t addr, uint8_t data);
