@@ -18,7 +18,7 @@
 #include "heartbeat.h"
 #include "watchdog.h"
 #include "debug.h"
-#include "i2ctask.h"
+#include "TMP117.h"
 #include "led_utils.h"
 
 #define I2C_SDA_ALT_PIN				16
@@ -43,7 +43,7 @@ void setup(void) {
     gpio_set_function(I2C_SDA_ALT_PIN, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SLK_ALT_PIN, GPIO_FUNC_I2C);
 
-	if (setupTMP117(i2c0)) {
+	if (tmp117_setup(i2c0)) {
 		uart_puts(uart0, "ERR TMP117\n");
 		exit(-1);
 	}
@@ -63,7 +63,7 @@ int main(void) {
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &WatchdogTask);
-	registerTask(TASK_TEMP_READ, &TaskReadTemp);
+	registerTask(TASK_TEMP_READ, &tmp117_taskReadTemp);
 
 	scheduleTaskOnce(
 			TASK_HEARTBEAT,

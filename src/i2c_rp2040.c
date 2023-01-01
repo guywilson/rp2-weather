@@ -115,127 +115,87 @@ int i2cReadRegister(
     return bytesRead;
 }
 
-int setupTMP117(i2c_inst_t * i2c) {
-    int                 error = 0;
-    uint8_t             deviceIDValue[2];
-    uint16_t            deviceID;
-    uint8_t             configData[2];
-
-    error = i2cReadRegister(i2c, TMP117_ADDRESS, TMP117_REG_DEVICE_ID, deviceIDValue, 2);
-
-    if (error < 0) {
-        return error;
-    }
-    else {
-        deviceID = ((uint16_t)deviceIDValue[0]) << 8 | (uint16_t)deviceIDValue[1];
-
-        if (deviceID != 0x0117) {
-            return PICO_ERROR_GENERIC;
-        }
-    }
-
-//    uart_puts(uart0, "TRd:");
-
-    /*
-    ** Continuous conversion, 8 sample average, 4 sec cycle time...
-    */
-    configData[0] = 0x02;
-    configData[1] = 0xA0;
-    error = i2cWriteRegister(i2c0, TMP117_ADDRESS, TMP117_REG_CONFIG, configData, 2);
-
-    if (error == PICO_ERROR_GENERIC) {
-        uart_puts(uart0, "ERR_GEN\n");
-    }
-    else if (error == PICO_ERROR_TIMEOUT) {
-        uart_puts(uart0, "ERR_TM\n");
-    }
-    else {
-//        uart_puts(uart0, "OK!\n");
-    }
-
-    return 0;
-}
-
-void setupI2C(i2c_baud baud) {
+void setupI2C(i2c_inst_t * i2c, i2c_baud baud) {
     uint16_t        lcnt = (uint16_t)(baud & 0x0000FFFF);
     uint16_t        hcnt = (uint16_t)((baud >> 16) & 0x0000FFFF);
 
-    i2c1->hw->enable = 0;
+    i2c->hw->enable = 0;
 
-    i2c1->hw->con =
+    i2c->hw->con =
             I2C_IC_CON_SPEED_VALUE_FAST << I2C_IC_CON_SPEED_LSB |
             I2C_IC_CON_MASTER_MODE_BITS |
             I2C_IC_CON_IC_SLAVE_DISABLE_BITS |
             I2C_IC_CON_IC_RESTART_EN_BITS |
             I2C_IC_CON_TX_EMPTY_CTRL_BITS;
 
-    hw_write_masked(&i2c1->hw->con,
+    hw_write_masked(&i2c->hw->con,
                    I2C_IC_CON_SPEED_VALUE_FAST << I2C_IC_CON_SPEED_LSB,
                    I2C_IC_CON_SPEED_BITS);
 
-    i2c1->hw->tx_tl = 0;
-    i2c1->hw->rx_tl = 0;
+    i2c->hw->tx_tl = 0;
+    i2c->hw->rx_tl = 0;
 
-    i2c1->hw->fs_scl_hcnt = hcnt;
-    i2c1->hw->fs_scl_lcnt = lcnt;
-    i2c1->hw->fs_spklen = lcnt < 16 ? 1 : lcnt / 16;
+    i2c->hw->fs_scl_hcnt = hcnt;
+    i2c->hw->fs_scl_lcnt = lcnt;
+    i2c->hw->fs_spklen = lcnt < 16 ? 1 : lcnt / 16;
 
-    hw_write_masked(&i2c1->hw->sda_hold,
+    hw_write_masked(&i2c->hw->sda_hold,
                     I2C_SDA_HOLD << I2C_IC_SDA_HOLD_IC_SDA_TX_HOLD_LSB,
                     I2C_IC_SDA_HOLD_IC_SDA_TX_HOLD_BITS);
 
     // Always enable the DREQ signalling -- harmless if DMA isn't listening
-    i2c1->hw->dma_cr = I2C_IC_DMA_CR_TDMAE_BITS | I2C_IC_DMA_CR_RDMAE_BITS;
+    i2c->hw->dma_cr = I2C_IC_DMA_CR_TDMAE_BITS | I2C_IC_DMA_CR_RDMAE_BITS;
 
-    i2c1->hw->enable = 1;
+    i2c->hw->enable = 1;
 
-    // irq_set_exclusive_handler(I2C0_IRQ, irqI2C0Handler);
+    irq_set_exclusive_handler(I2C0_IRQ, irqI2C0Handler);
+    irq_set_exclusive_handler(I2C1_IRQ, irqI2C1Handler);
 
-    // /*
-    // ** Unmask the TX_EMPTY & RX_FULL interrupts...
-    // */
-    // i2c0->hw->intr_mask |= 
-    //     (I2C_IC_INTR_MASK_M_TX_EMPTY_BITS | 
-    //     I2C_IC_INTR_MASK_M_RX_FULL_BITS);
+    /*
+    ** Unmask the TX_EMPTY & RX_FULL interrupts...
+    */
+    i2c->hw->intr_mask |= 
+        (I2C_IC_INTR_MASK_M_TX_EMPTY_BITS | 
+        I2C_IC_INTR_MASK_M_RX_FULL_BITS);
 }
 
-void i2cWrite(uint8_t addr, uint8_t * data, int length) {
-    i2c0->hw->enable = 0;
-    i2c0->hw->tar = addr;
-    i2c0->hw->enable = 1;
+void i2cWrite(i2c_inst_t * i2c, uint8_t addr, uint8_t * data, int length) {
+    i2c->hw->enable = 0;
+    i2c->hw->tar = addr;
+    i2c->hw->enable = 1;
 
     memcpy(i2cDevices[0].txBuffer, data, length);
 
     i2cDevices[0].txIndex = 0;
     i2cDevices[0].txBufferLen = length;
-    i2c0->hw->data_cmd = i2cDevices[0].txBuffer[i2cDevices[0].txIndex++];
+    i2c->hw->data_cmd = i2cDevices[0].txBuffer[i2cDevices[0].txIndex++];
 
     /*
     ** Unmask the TX_EMPTY interrupt...
     */
-    i2c0->hw->intr_mask |= I2C_IC_INTR_MASK_M_TX_EMPTY_BITS;
+    i2c->hw->intr_mask |= I2C_IC_INTR_MASK_M_TX_EMPTY_BITS;
 }
 
-void i2cWriteByte(uint8_t addr, uint8_t data) {
-    i2c0->hw->enable = 0;
-    i2c0->hw->tar = addr;
-    i2c0->hw->enable = 1;
+void i2cWriteByte(i2c_inst_t * i2c, uint8_t addr, uint8_t data) {
+    i2c->hw->enable = 0;
+    i2c->hw->tar = addr;
+    i2c->hw->enable = 1;
 
-    i2c0->hw->data_cmd = data;
+    i2c->hw->data_cmd = data;
 }
 
-void i2cRead(uint8_t addr) {
-    i2c0->hw->enable = 0;
-    i2c0->hw->tar = addr;
-    i2c0->hw->enable = 1;
+void i2cRead(i2c_inst_t * i2c, uint8_t addr) {
+    i2c->hw->enable = 0;
+    i2c->hw->tar = addr;
+    i2c->hw->enable = 1;
 
     /*
     ** Let the I2C know we're reading...
     */
-    i2c0->hw->data_cmd = I2C_IC_DATA_CMD_CMD_BITS;
+    i2c->hw->data_cmd = I2C_IC_DATA_CMD_CMD_BITS;
 
     /*
     ** Unmask the RX_FULL interrupt...
     */
-    i2c0->hw->intr_mask |= I2C_IC_INTR_MASK_M_RX_FULL_BITS;
+    i2c->hw->intr_mask |= I2C_IC_INTR_MASK_M_RX_FULL_BITS;
 }
