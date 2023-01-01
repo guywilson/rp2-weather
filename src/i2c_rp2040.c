@@ -115,8 +115,45 @@ int i2cReadRegister(
     return bytesRead;
 }
 
-void setupTMP117() {
-	i2c_init(i2c_default, 400000);
+int setupTMP117(i2c_inst_t * i2c) {
+    int                 error = 0;
+    uint8_t             deviceIDValue[2];
+    uint16_t            deviceID;
+    uint8_t             configData[2];
+
+    error = i2cReadRegister(i2c, TMP117_ADDRESS, TMP117_REG_DEVICE_ID, deviceIDValue, 2);
+
+    if (error < 0) {
+        return error;
+    }
+    else {
+        deviceID = ((uint16_t)deviceIDValue[0]) << 8 | (uint16_t)deviceIDValue[1];
+
+        if (deviceID != 0x0117) {
+            return PICO_ERROR_GENERIC;
+        }
+    }
+
+//    uart_puts(uart0, "TRd:");
+
+    /*
+    ** Continuous conversion, 8 sample average, 4 sec cycle time...
+    */
+    configData[0] = 0x02;
+    configData[1] = 0xA0;
+    error = i2cWriteRegister(i2c0, TMP117_ADDRESS, TMP117_REG_CONFIG, configData, 2);
+
+    if (error == PICO_ERROR_GENERIC) {
+        uart_puts(uart0, "ERR_GEN\n");
+    }
+    else if (error == PICO_ERROR_TIMEOUT) {
+        uart_puts(uart0, "ERR_TM\n");
+    }
+    else {
+//        uart_puts(uart0, "OK!\n");
+    }
+
+    return 0;
 }
 
 void setupI2C(i2c_baud baud) {

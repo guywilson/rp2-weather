@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stddef.h>
+#include <stdlib.h>
 
 #include "scheduler.h"
 #include "schederr.h"
@@ -42,6 +43,10 @@ void setup(void) {
     gpio_set_function(I2C_SDA_ALT_PIN, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SLK_ALT_PIN, GPIO_FUNC_I2C);
 
+	if (setupTMP117(i2c0)) {
+		uart_puts(uart0, "ERR TMP117\n");
+		exit(-1);
+	}
 	setupSerial();
 }
 
@@ -54,12 +59,10 @@ int main(void) {
 		turnOff(LED_ONBOARD);
 	}
 
-	initScheduler(4);
+	initScheduler(3);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &WatchdogTask);
-//	registerTask(TASK_DEBUG, &TaskDebug);
-	registerTask(TASK_TEMP_TRIGGER, &TaskTriggerTemp);
 	registerTask(TASK_TEMP_READ, &TaskReadTemp);
 
 	scheduleTaskOnce(
@@ -67,20 +70,15 @@ int main(void) {
 			rtc_val_ms(950),
 			NULL);
 
-	scheduleTaskOnce(
-			TASK_TEMP_TRIGGER,
-			rtc_val_sec(5),
+	scheduleTask(
+			TASK_TEMP_READ, 
+			rtc_val_ms(4150), 
 			NULL);
 
 	scheduleTask(
 			TASK_WATCHDOG, 
 			rtc_val_ms(50), 
 			NULL);
-
-	// scheduleTask(
-	// 		TASK_DEBUG,
-	// 		rtc_val_sec(1),
-	// 		NULL);
 
 	/*
 	** Enable the watchdog, it will reset the device in 100ms unless

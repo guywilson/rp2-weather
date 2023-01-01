@@ -55,7 +55,7 @@ int i2cReadRegister(
             const uint8_t reg, 
             uint8_t * data, 
             const uint8_t length);
-void setupTMP117();
+int setupTMP117(i2c_inst_t * i2c);
 void setupI2C(i2c_baud baud);
 void i2cWrite(uint8_t addr, uint8_t * data, int length);
 void i2cWriteByte(uint8_t addr, uint8_t data);
