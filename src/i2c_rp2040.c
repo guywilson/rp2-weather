@@ -81,42 +81,76 @@ void irqI2C1Handler() {
     }
 }
 
+int i2cWriteRegister(
+            i2c_inst_t *i2c, 
+            const uint addr, 
+            const uint8_t reg, 
+            uint8_t * data, 
+            const uint8_t length)
+{
+    int             bytesWritten = 0;
+    uint8_t         msg[length + 1];
+
+    msg[0] = reg;
+    memcpy(&msg[1], data, length);
+
+    bytesWritten = i2c_write_blocking(i2c, addr, msg, (length + 1), false);
+
+    return bytesWritten;
+}
+
+int i2cReadRegister(
+            i2c_inst_t *i2c, 
+            const uint addr, 
+            const uint8_t reg, 
+            uint8_t * data, 
+            const uint8_t length)
+{
+   int      bytesRead = 0;
+
+    // Read data from register(s) over I2C
+    i2c_write_blocking(i2c, addr, &reg, 1, true);
+    bytesRead = i2c_read_blocking(i2c, addr, data, length, false);
+
+    return bytesRead;
+}
+
 void setupTMP117() {
-	i2c_init(i2c0, 200000);
+	i2c_init(i2c_default, 400000);
 }
 
 void setupI2C(i2c_baud baud) {
     uint16_t        lcnt = (uint16_t)(baud & 0x0000FFFF);
     uint16_t        hcnt = (uint16_t)((baud >> 16) & 0x0000FFFF);
 
-    i2c0->hw->enable = 0;
+    i2c1->hw->enable = 0;
 
-    i2c0->hw->con =
+    i2c1->hw->con =
             I2C_IC_CON_SPEED_VALUE_FAST << I2C_IC_CON_SPEED_LSB |
             I2C_IC_CON_MASTER_MODE_BITS |
             I2C_IC_CON_IC_SLAVE_DISABLE_BITS |
             I2C_IC_CON_IC_RESTART_EN_BITS |
             I2C_IC_CON_TX_EMPTY_CTRL_BITS;
 
-    hw_write_masked(&i2c0->hw->con,
+    hw_write_masked(&i2c1->hw->con,
                    I2C_IC_CON_SPEED_VALUE_FAST << I2C_IC_CON_SPEED_LSB,
                    I2C_IC_CON_SPEED_BITS);
 
-    i2c0->hw->tx_tl = 0;
-    i2c0->hw->rx_tl = 0;
+    i2c1->hw->tx_tl = 0;
+    i2c1->hw->rx_tl = 0;
 
-    i2c0->hw->fs_scl_hcnt = hcnt;
-    i2c0->hw->fs_scl_lcnt = lcnt;
-    i2c0->hw->fs_spklen = lcnt < 16 ? 1 : lcnt / 16;
+    i2c1->hw->fs_scl_hcnt = hcnt;
+    i2c1->hw->fs_scl_lcnt = lcnt;
+    i2c1->hw->fs_spklen = lcnt < 16 ? 1 : lcnt / 16;
 
-    hw_write_masked(&i2c0->hw->sda_hold,
+    hw_write_masked(&i2c1->hw->sda_hold,
                     I2C_SDA_HOLD << I2C_IC_SDA_HOLD_IC_SDA_TX_HOLD_LSB,
                     I2C_IC_SDA_HOLD_IC_SDA_TX_HOLD_BITS);
 
     // Always enable the DREQ signalling -- harmless if DMA isn't listening
-    i2c0->hw->dma_cr = I2C_IC_DMA_CR_TDMAE_BITS | I2C_IC_DMA_CR_RDMAE_BITS;
+    i2c1->hw->dma_cr = I2C_IC_DMA_CR_TDMAE_BITS | I2C_IC_DMA_CR_RDMAE_BITS;
 
-    i2c0->hw->enable = 1;
+    i2c1->hw->enable = 1;
 
     // irq_set_exclusive_handler(I2C0_IRQ, irqI2C0Handler);
 

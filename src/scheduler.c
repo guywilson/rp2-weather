@@ -141,7 +141,7 @@ void _rtcISR()
 
 	if (_tickCount == RTC_INTERRUPT_PRESCALER) {
 	    /*
-	    ** The RTC is incremented every 100 us,
+	    ** The RTC is incremented every 1ms,
 		** it is used to drive the real time clock
 		** for the scheduler...
 	    */

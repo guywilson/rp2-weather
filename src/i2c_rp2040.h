@@ -43,6 +43,18 @@ typedef struct {
 }
 I2C_RX;
 
+int i2cWriteRegister(
+            i2c_inst_t *i2c, 
+            const uint addr, 
+            const uint8_t reg, 
+            uint8_t * data, 
+            const uint8_t length);
+int i2cReadRegister(
+            i2c_inst_t *i2c, 
+            const uint addr, 
+            const uint8_t reg, 
+            uint8_t * data, 
+            const uint8_t length);
 void setupTMP117();
 void setupI2C(i2c_baud baud);
 void i2cWrite(uint8_t addr, uint8_t * data, int length);
