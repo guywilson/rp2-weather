@@ -33,7 +33,9 @@ if (PICO_ON_DEVICE)
             src/serial_rp2040.c
             src/error_rp2040.c
             src/i2c_rp2040.c
+            src/spi_rp2040.c
             src/TMP117.c
+            src/nRF24L01.c
             src/heartbeat.c
             src/debug.c
             src/led_utils.c
@@ -42,7 +44,13 @@ if (PICO_ON_DEVICE)
     # Disable SDK alarm support for this lowlevel example
     set(PICO_TIME_DEFAULT_ALARM_POOL_DISABLED 1)
 
-    target_link_libraries(rp2-weather pico_stdlib pico_multicore hardware_i2c hardware_uart)
+    target_link_libraries(
+            rp2-weather 
+            pico_stdlib 
+            pico_multicore 
+            hardware_i2c 
+            hardware_spi 
+            hardware_uart)
 
     # create map/bin/hex file etc.
     pico_add_extra_outputs(rp2-weather)
