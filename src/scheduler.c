@@ -710,7 +710,11 @@ void schedule()
 	/*
 	** If no tasks have been registered, just loop until some are...
 	*/
-	while (td == NULL);
+	while (td == NULL) {
+#ifdef PICO_MULTICORE
+		__sleep();
+#endif		
+	}
 
 	/*
 	** Scheduler loop, run forever waiting for tasks to be

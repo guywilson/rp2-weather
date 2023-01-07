@@ -42,6 +42,8 @@ void setup(void) {
 	setupLEDPin();
 	setupRTC();
 
+	setupSerial();
+	
 	/*
 	** Allow us to plug in the USB cable to
 	** debug setup...
@@ -82,8 +84,6 @@ void setup(void) {
 	gpio_set_function(2, GPIO_FUNC_SPI);	// SPI SCK
 
 	nRF24L01_setup(spi0, 5);
-
-	setupSerial();
 }
 
 int main(void) {
