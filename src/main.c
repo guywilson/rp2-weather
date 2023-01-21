@@ -43,7 +43,7 @@ void setup(void) {
 	setupRTC();
 
 	setupSerial();
-	
+
 	/*
 	** Allow us to plug in the USB cable to
 	** debug setup...
@@ -62,28 +62,7 @@ void setup(void) {
 
 	spi_init(spi0, 5000000);
 
-	/*
-	** SPI CSn
-	*/
-	gpio_init(5);
-	gpio_set_dir(5, true);
-	gpio_put(5, 1);
-
-	/*
-	** SPI CE
-	*/
-	gpio_init(26);
-	gpio_set_dir(26, true);
-	gpio_put(26, 1);
-
-	gpio_init(28);
-	gpio_set_dir(28, false);				// SPI IRQ
-
-	gpio_set_function(3, GPIO_FUNC_SPI);	// SPI TX
-	gpio_set_function(4, GPIO_FUNC_SPI);	// SPI RX
-	gpio_set_function(2, GPIO_FUNC_SPI);	// SPI SCK
-
-	nRF24L01_setup(spi0, 5);
+	nRF24L01_setup(spi0);
 }
 
 int main(void) {

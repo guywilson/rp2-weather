@@ -3,12 +3,14 @@
 #include <string.h>
 
 #include "hardware/i2c.h"
+#include "hardware/spi.h"
 #include "hardware/timer.h"
 #include "scheduler.h"
 #include "taskdef.h"
 #include "TMP117.h"
 #include "i2c_rp2040.h"
 #include "rtc_rp2040.h"
+#include "nRF24L01.h"
 
 static char                szTemp[64];
 
@@ -62,5 +64,6 @@ void tmp117_taskReadTemp(PTASKPARM p) {
     temp = (double)tempInt * 0.0078125;
 
     sprintf(szTemp, " T %uus: %.2f\n", (timer_hw->timerawl - startTime), temp);
-    uart_puts(uart0, szTemp);
+    nRF24L01_transmit_string(spi0, szTemp, false);
+//    uart_puts(uart0, szTemp);
 }

@@ -111,11 +111,11 @@ int spiWriteReadData(spi_inst_t * spi, uint csPin, uint8_t * src, uint8_t * dst,
     return bytesWritten;
 }
 
-int spiReadByte(spi_inst_t * spi, uint csPin, uint8_t data, bool noDeselect) {
+int spiReadByte(spi_inst_t * spi, uint csPin, uint8_t * data, bool noDeselect) {
     int         bytesRead;
 
     chipSelect(csPin);
-    bytesRead = spi_read_blocking(spi, 0x00, &data, 1);
+    bytesRead = spi_read_blocking(spi, 0x00, data, 1);
 
     if (!noDeselect) {
         chipDeselect(csPin);
@@ -124,12 +124,12 @@ int spiReadByte(spi_inst_t * spi, uint csPin, uint8_t data, bool noDeselect) {
     return bytesRead;
 }
 
-int spiReadWord(spi_inst_t * spi, uint csPin, uint16_t data, bool noDeselect) {
+int spiReadWord(spi_inst_t * spi, uint csPin, uint16_t * data, bool noDeselect) {
     int         bytesRead;
     uint8_t     buf[2];
 
-    buf[0] = (uint8_t)(data & 0x00FF);
-    buf[1] = (uint8_t)((data >> 8) & 0x00FF);
+    buf[0] = (uint8_t)(*data & 0x00FF);
+    buf[1] = (uint8_t)((*data >> 8) & 0x00FF);
 
     chipSelect(csPin);
     bytesRead = spi_read_blocking(spi, 0x00, buf, 2);

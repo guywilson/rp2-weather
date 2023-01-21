@@ -2,6 +2,16 @@
 #define __INCL_NRF24L01
 
 /*
+** PIN definitions
+*/
+#define NRF24L01_SPI_PIN_CE                         26
+#define NRF24L01_SPI_PIN_CSN                         5
+#define NRF24L01_SPI_PIN_IRQ                        28
+#define NRF24L01_SPI_PIN_MOSI                        3
+#define NRF24L01_SPI_PIN_MISO                        4
+#define NRF24L01_SPI_PIN_SCK                         2
+
+/*
 ** nRF24L01 commands
 */
 #define NRF24L01_CMD_R_REGISTER                     0x00
@@ -46,18 +56,18 @@
 #define NRF24L01_REG_DYNPD                          0x1C
 #define NRF24L01_REG_FEATURE                        0x1D
 
-int nRF24L01_setup(
+int nRF24L01_setup(spi_inst_t * spi); 
+int nRF24L01_transmit_buffer(
             spi_inst_t * spi, 
-            uint csPin);
-int nRF24L01_transmit(
-            spi_inst_t * spi, 
-            uint csPin, 
-            uint8_t * buffer, 
+            uint8_t * buf, 
             int length, 
+            bool requestACK);
+int nRF24L01_transmit_string(
+            spi_inst_t * spi, 
+            char * pszText, 
             bool requestACK);
 int nRF24L01_receive(
             spi_inst_t * spi, 
-            uint csPin, 
             uint8_t * buffer, 
             int length);
 

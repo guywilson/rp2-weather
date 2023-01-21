@@ -26,5 +26,6 @@
 
 
 void		setupRTC();
+void        rtcDelay(uint32_t delay_us);
 
 #endif

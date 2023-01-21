@@ -12,6 +12,17 @@
 
 #define RTC_INTERRUPT_CYCLE             250U
 
+void rtcDelay(uint32_t delay_us) {
+    uint32_t            startTime;
+    uint32_t            endTime;
+
+    startTime = timer_hw->timerawl;
+    endTime = startTime + delay_us;
+
+    // Delay 15us...
+    while (timer_hw->timerawl < endTime);
+}
+
 static void irqTimerAlarm() {
     // Clear the alarm irq
     hw_clear_bits(&timer_hw->intr, 1u << ALARM_NUM);
