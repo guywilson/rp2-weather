@@ -19,7 +19,7 @@
 #include "heartbeat.h"
 #include "watchdog.h"
 #include "debug.h"
-#include "TMP117.h"
+#include "sensor.h"
 #include "nRF24L01.h"
 #include "led_utils.h"
 
@@ -74,20 +74,25 @@ int main(void) {
 		turnOff(LED_ONBOARD);
 	}
 
-	initScheduler(3);
+	initScheduler(5);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &WatchdogTask);
-	registerTask(TASK_TEMP_READ, &tmp117_taskReadTemp);
+	registerTask(TASK_READ_TEMP, &taskReadTemp);
+	registerTask(TASK_READ_HUMIDITY, &taskReadHumidity);
+	registerTask(TASK_READ_PRESSURE, &taskReadPressure);
 
 	scheduleTaskOnce(
 			TASK_HEARTBEAT,
 			rtc_val_ms(950),
 			NULL);
 
-	scheduleTask(
-			TASK_TEMP_READ, 
-			rtc_val_ms(4150), 
+	/*
+	** Start the sensor chain...
+	*/
+	scheduleTaskOnce(
+			TASK_READ_TEMP, 
+			rtc_val_ms(4000), 
 			NULL);
 
 	scheduleTask(

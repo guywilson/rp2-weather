@@ -34,7 +34,7 @@ if (PICO_ON_DEVICE)
             src/error_rp2040.c
             src/i2c_rp2040.c
             src/spi_rp2040.c
-            src/TMP117.c
+            src/sensor.c
             src/nRF24L01.c
             src/heartbeat.c
             src/debug.c
