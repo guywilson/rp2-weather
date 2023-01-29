@@ -28,6 +28,8 @@
 
 #define SPI0_CSEL_PIN				22
 
+sensor_chain_t			sensors[3];
+
 void watchdog_disable(void) {
 	hw_clear_bits(&watchdog_hw->ctrl, WATCHDOG_CTRL_ENABLE_BITS);
 }
@@ -66,6 +68,8 @@ void setup(void) {
 }
 
 int main(void) {
+	sensor_chain_t *		sensor;
+
 	setup();
 
 	if (watchdog_caused_reboot()) {
@@ -88,12 +92,26 @@ int main(void) {
 			NULL);
 
 	/*
+	** Setup the sensor chain...
+	*/
+	sensors[0].taskID = TASK_READ_TEMP;
+	sensors[0].next = &sensors[1];
+
+	sensors[1].taskID = TASK_READ_HUMIDITY;
+	sensors[1].next = &sensors[2];
+
+	sensors[2].taskID = TASK_READ_PRESSURE;
+	sensors[3].next = &sensors[0];
+
+	sensor = &sensors[0];
+
+	/*
 	** Start the sensor chain...
 	*/
 	scheduleTaskOnce(
-			TASK_READ_TEMP, 
+			sensor->taskID, 
 			rtc_val_ms(4000), 
-			NULL);
+			sensor);
 
 	scheduleTask(
 			TASK_WATCHDOG, 

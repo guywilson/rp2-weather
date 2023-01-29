@@ -22,6 +22,12 @@ typedef struct {
 }
 weather_packet_t;
 
+typedef struct {
+    uint16_t        taskID;
+    void *          next;
+}
+sensor_chain_t;
+
 int tmp117_setup(i2c_inst_t * i2c);
 void taskReadTemp(PTASKPARM p);
 void taskReadHumidity(PTASKPARM p);
