@@ -156,11 +156,11 @@ int nRF24L01_setup(spi_inst_t * spi) {
     sprintf(szTemp, "St: 0x%02X\n", statusReg);
     uart_puts(uart0, szTemp);
 
-    txAddr[0] = 0x34;
-    txAddr[1] = 0x43;
-    txAddr[2] = 0x10;
-    txAddr[3] = 0x10;
-    txAddr[4] = 0x01;
+    txAddr[0] = 'A';
+    txAddr[1] = 'Z';
+    txAddr[2] = '4';
+    txAddr[3] = '3';
+    txAddr[4] = '8';
 
     spiWriteReadByte(
                 spi, 

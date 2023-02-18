@@ -91,27 +91,27 @@ int main(void) {
 			rtc_val_ms(950),
 			NULL);
 
-	/*
-	** Setup the sensor chain...
-	*/
-	sensors[0].taskID = TASK_READ_TEMP;
-	sensors[0].next = &sensors[1];
+	// /*
+	// ** Setup the sensor chain...
+	// */
+	// sensors[0].taskID = TASK_READ_TEMP;
+	// sensors[0].next = &sensors[1];
 
-	sensors[1].taskID = TASK_READ_HUMIDITY;
-	sensors[1].next = &sensors[2];
+	// sensors[1].taskID = TASK_READ_HUMIDITY;
+	// sensors[1].next = &sensors[2];
 
-	sensors[2].taskID = TASK_READ_PRESSURE;
-	sensors[3].next = &sensors[0];
+	// sensors[2].taskID = TASK_READ_PRESSURE;
+	// sensors[3].next = &sensors[0];
 
-	sensor = &sensors[0];
+	// sensor = &sensors[0];
 
 	/*
 	** Start the sensor chain...
 	*/
 	scheduleTaskOnce(
-			sensor->taskID, 
+			TASK_READ_TEMP, 
 			rtc_val_ms(4000), 
-			sensor);
+			NULL);
 
 	scheduleTask(
 			TASK_WATCHDOG, 

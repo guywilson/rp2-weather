@@ -19,20 +19,6 @@
 static char                 szTemp[64];
 weather_packet_t            weather;
 
-short_decimal_t sd_from_double(double value) {
-    short_decimal_t         sdValue;
-
-    sdValue.numerator = (int16_t)value;
-
-	value = fabs(value);
-	
-	value -= (double)((uint16_t)value);
-	value *= 1000.0;
-    sdValue.denominator = (uint16_t)value;
-
-    return sdValue;
-}
-
 int tmp117_setup(i2c_inst_t * i2c) {
     int                 error = 0;
     uint8_t             deviceIDValue[2];
@@ -72,33 +58,32 @@ int tmp117_setup(i2c_inst_t * i2c) {
 void taskReadTemp(PTASKPARM p) {
     uint8_t             tempRegister[2];
     int16_t             tempInt;
-    double              temp;
-    uint32_t            startTime;
-    sensor_chain_t *    sensor;
+    uint8_t             buffer[32];
 
-    sensor = (sensor_chain_t *)p;
+//    sensor_chain_t *    sensor;
 
-    startTime = timer_hw->timerawl;
+//    sensor = (sensor_chain_t *)p;
+
+//    startTime = timer_hw->timerawl;
 
     i2cReadRegister(i2c0, TMP117_ADDRESS, TMP117_REG_TEMP, tempRegister, 2);
 
     tempInt = (int16_t)((((int16_t)tempRegister[0]) << 8) | (int16_t)tempRegister[1]);
-    temp = (double)tempInt * 0.0078125;
+    weather.temperature = (float)tempInt * 0.0078125;
 
-    weather.temperature = sd_from_double(temp);
+    memcpy(buffer, &weather, sizeof(weather_packet_t));
 
-    sprintf(szTemp, " T %uus: %.2f\n", (timer_hw->timerawl - startTime), temp);
-    nRF24L01_transmit_string(spi0, szTemp, false);
+    nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
 
-    sensor = sensor->next;
+//    sensor = sensor->next;
 
-    scheduleTaskOnce(sensor->taskID, rtc_val_ms(4000), sensor);
+//    scheduleTaskOnce(sensor->taskID, rtc_val_ms(4000), sensor);
+    scheduleTaskOnce(TASK_READ_TEMP, rtc_val_ms(4000), NULL);
 }
 
 void taskReadHumidity(PTASKPARM p) {
     uint8_t             regBuffer[6];
     uint16_t            humidityResp;
-    double              rh;
     sensor_chain_t *    sensor;
 
     sensor = (sensor_chain_t *)p;
@@ -107,9 +92,7 @@ void taskReadHumidity(PTASKPARM p) {
 
     humidityResp = (uint16_t)regBuffer[3];
 
-    rh = (double)-6.0 + ((double)125 * ((double)humidityResp / (double)65535.0));
-
-    weather.humidity = sd_from_double(rh);
+    weather.humidity = -6.0f + (125.0f * ((float)humidityResp / 65535.0f));
 
     sensor = sensor->next;
 
@@ -117,14 +100,17 @@ void taskReadHumidity(PTASKPARM p) {
 }
 
 void taskReadPressure(PTASKPARM p) {
-    static uint8_t      buffer[sizeof(weather_packet_t)];
+//    static uint8_t      buffer[sizeof(weather_packet_t)];
+//    float               pressure;
     sensor_chain_t *    sensor;
 
     sensor = (sensor_chain_t *)p;
 
-    memcpy(buffer, &weather, sizeof(weather_packet_t));
+    sprintf(szTemp, "T:%.2f/H:%.2f/P:%.2f\n", weather.temperature, weather.humidity, weather.pressure);
+    nRF24L01_transmit_string(spi0, szTemp, false);
 
-    nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
+//    memcpy(buffer, &weather, sizeof(weather_packet_t));
+//    nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
 
     sensor = sensor->next;
 
