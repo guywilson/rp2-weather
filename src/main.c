@@ -28,8 +28,6 @@
 
 #define SPI0_CSEL_PIN				22
 
-sensor_chain_t			sensors[3];
-
 void watchdog_disable(void) {
 	hw_clear_bits(&watchdog_hw->ctrl, WATCHDOG_CTRL_ENABLE_BITS);
 }
@@ -57,7 +55,7 @@ void setup(void) {
     gpio_set_function(I2C_SDA_ALT_PIN, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SLK_ALT_PIN, GPIO_FUNC_I2C);
 
-	if (tmp117_setup(i2c0)) {
+	if (initSensors(i2c0)) {
 		uart_puts(uart0, "ERR TMP117\n");
 		exit(-1);
 	}
@@ -68,7 +66,8 @@ void setup(void) {
 }
 
 int main(void) {
-	sensor_chain_t *		sensor;
+	// sensor_chain_t			sensors[3];
+	// sensor_chain_t *		sensor;
 
 	setup();
 

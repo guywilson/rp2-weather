@@ -16,7 +16,6 @@
 #include "SHT4x.h"
 #include "nRF24L01.h"
 
-static char                 szTemp[64];
 weather_packet_t            weather;
 
 int tmp117_setup(i2c_inst_t * i2c) {
@@ -55,64 +54,69 @@ int tmp117_setup(i2c_inst_t * i2c) {
     return 0;
 }
 
+int initSensors(i2c_inst_t * i2c) {
+    int         rtn;
+
+    rtn = tmp117_setup(i2c);
+
+    if (rtn) {
+        return rtn;
+    }
+
+    return 0;
+}
+
 void taskReadTemp(PTASKPARM p) {
     uint8_t             tempRegister[2];
     int16_t             tempInt;
-    uint8_t             buffer[32];
-
-//    sensor_chain_t *    sensor;
-
-//    sensor = (sensor_chain_t *)p;
-
-//    startTime = timer_hw->timerawl;
+    // sensor_chain_t *    sensor = (sensor_chain_t *)p;
 
     i2cReadRegister(i2c0, TMP117_ADDRESS, TMP117_REG_TEMP, tempRegister, 2);
 
     tempInt = (int16_t)((((int16_t)tempRegister[0]) << 8) | (int16_t)tempRegister[1]);
     weather.temperature = (float)tempInt * 0.0078125;
 
-    memcpy(buffer, &weather, sizeof(weather_packet_t));
+    // memcpy(buffer, &weather, sizeof(weather_packet_t));
+    // nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
 
-    nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
+    // sensor = (sensor_chain_t *)sensor->next;
 
-//    sensor = sensor->next;
-
-//    scheduleTaskOnce(sensor->taskID, rtc_val_ms(4000), sensor);
-    scheduleTaskOnce(TASK_READ_TEMP, rtc_val_ms(4000), NULL);
+    scheduleTaskOnce(TASK_READ_HUMIDITY, rtc_val_ms(4000), NULL);
 }
 
 void taskReadHumidity(PTASKPARM p) {
     uint8_t             regBuffer[6];
     uint16_t            humidityResp;
-    sensor_chain_t *    sensor;
-
-    sensor = (sensor_chain_t *)p;
+    // sensor_chain_t *    sensor = (sensor_chain_t *)p;
 
     i2cReadRegister(i2c0, SHT4X_ADDRESS, SHT4X_CMD_MEASURE_HI_PRN, regBuffer, 6);
 
     humidityResp = (uint16_t)regBuffer[3];
 
-    weather.humidity = -6.0f + (125.0f * ((float)humidityResp / 65535.0f));
+    weather.humidity = -6.0f + ((float)humidityResp * 0.0019074);
 
-    sensor = sensor->next;
+    if (weather.humidity < 0.0) {
+        weather.humidity = 0.0;
+    }
+    else if (weather.humidity > 100.0) {
+        weather.humidity = 100.0;
+    }
 
-    scheduleTaskOnce(sensor->taskID, rtc_val_ms(4000), sensor);
+    // sensor = (sensor_chain_t *)sensor->next;
+
+    scheduleTaskOnce(TASK_READ_PRESSURE, rtc_val_ms(4000), NULL);
 }
 
 void taskReadPressure(PTASKPARM p) {
-//    static uint8_t      buffer[sizeof(weather_packet_t)];
-//    float               pressure;
-    sensor_chain_t *    sensor;
+    static uint8_t      buffer[sizeof(weather_packet_t)];
+    // sensor_chain_t *    sensor = (sensor_chain_t *)p;
 
-    sensor = (sensor_chain_t *)p;
+    weather.pressure = 1021.41;
 
-    sprintf(szTemp, "T:%.2f/H:%.2f/P:%.2f\n", weather.temperature, weather.humidity, weather.pressure);
-    nRF24L01_transmit_string(spi0, szTemp, false);
+    memcpy(buffer, &weather, sizeof(weather_packet_t));
+    nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
 
-//    memcpy(buffer, &weather, sizeof(weather_packet_t));
-//    nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
+    // sensor = (sensor_chain_t *)sensor->next;
 
-    sensor = sensor->next;
-
-    scheduleTaskOnce(sensor->taskID, rtc_val_ms(4000), sensor);
+    scheduleTaskOnce(TASK_READ_TEMP, rtc_val_ms(4000), NULL);
 }

@@ -22,9 +22,9 @@ typedef struct {
 }
 sensor_chain_t;
 
-int tmp117_setup(i2c_inst_t * i2c);
-void taskReadTemp(PTASKPARM p);
-void taskReadHumidity(PTASKPARM p);
-void taskReadPressure(PTASKPARM p);
+int     initSensors(i2c_inst_t * i2c);
+void    taskReadTemp(PTASKPARM p);
+void    taskReadHumidity(PTASKPARM p);
+void    taskReadPressure(PTASKPARM p);
 
 #endif
