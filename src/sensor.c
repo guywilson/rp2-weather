@@ -60,12 +60,10 @@ int initSensors(i2c_inst_t * i2c) {
 
 void taskReadTemp(PTASKPARM p) {
     uint8_t             tempRegister[2];
-    int16_t             tempInt;
 
     i2cReadRegister(i2c0, TMP117_ADDRESS, TMP117_REG_TEMP, tempRegister, 2);
 
-    tempInt = (int16_t)((((int16_t)tempRegister[0]) << 8) | (int16_t)tempRegister[1]);
-    weather.temperature = (float)tempInt * 0.0078125;
+    weather.rawTemperature = (int16_t)((((int16_t)tempRegister[0]) << 8) | (int16_t)tempRegister[1]);
 
     scheduleTaskOnce(TASK_READ_HUMIDITY_1, rtc_val_ms(4000), NULL);
 }
@@ -82,20 +80,10 @@ void taskReadHumidity_step1(PTASKPARM p) {
 
 void taskReadHumidity_step2(PTASKPARM p) {
     uint8_t             regBuffer[6];
-    uint16_t            humidityResp;
 
     i2c_read_blocking(i2c0, SHT4X_ADDRESS, regBuffer, 6, false);
 
-    memcpy(&humidityResp, &regBuffer[3], sizeof(uint16_t));
-
-    weather.humidity = -6.0f + ((float)humidityResp * 0.0019074);
-
-    if (weather.humidity < 0.0) {
-        weather.humidity = 0.0;
-    }
-    else if (weather.humidity > 100.0) {
-        weather.humidity = 100.0;
-    }
+    memcpy(&weather.rawHumidity, &regBuffer[3], sizeof(uint16_t));
 
     scheduleTaskOnce(TASK_READ_PRESSURE, rtc_val_ms(3990), NULL);
 }
@@ -103,7 +91,7 @@ void taskReadHumidity_step2(PTASKPARM p) {
 void taskReadPressure(PTASKPARM p) {
     static uint8_t      buffer[sizeof(weather_packet_t)];
 
-    weather.pressure = 1021.41;
+    weather.rawPressure = 3819;
 
     memcpy(buffer, &weather, sizeof(weather_packet_t));
     nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), true);
