@@ -50,7 +50,8 @@ if (PICO_ON_DEVICE)
             pico_multicore 
             hardware_i2c 
             hardware_spi 
-            hardware_uart)
+            hardware_uart
+            hardware_pio)
 
     # create map/bin/hex file etc.
     pico_add_extra_outputs(rp2-weather)

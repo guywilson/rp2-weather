@@ -66,9 +66,6 @@ void setup(void) {
 }
 
 int main(void) {
-	// sensor_chain_t			sensors[3];
-	// sensor_chain_t *		sensor;
-
 	setup();
 
 	if (watchdog_caused_reboot()) {
@@ -77,32 +74,19 @@ int main(void) {
 		turnOff(LED_ONBOARD);
 	}
 
-	initScheduler(5);
+	initScheduler(6);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &WatchdogTask);
 	registerTask(TASK_READ_TEMP, &taskReadTemp);
-	registerTask(TASK_READ_HUMIDITY, &taskReadHumidity);
+	registerTask(TASK_READ_HUMIDITY_1, &taskReadHumidity_step1);
+	registerTask(TASK_READ_HUMIDITY_2, &taskReadHumidity_step2);
 	registerTask(TASK_READ_PRESSURE, &taskReadPressure);
 
 	scheduleTaskOnce(
 			TASK_HEARTBEAT,
 			rtc_val_ms(950),
 			NULL);
-
-	// /*
-	// ** Setup the sensor chain...
-	// */
-	// sensors[0].taskID = TASK_READ_TEMP;
-	// sensors[0].next = &sensors[1];
-
-	// sensors[1].taskID = TASK_READ_HUMIDITY;
-	// sensors[1].next = &sensors[2];
-
-	// sensors[2].taskID = TASK_READ_PRESSURE;
-	// sensors[3].next = &sensors[0];
-
-	// sensor = &sensors[0];
 
 	/*
 	** Start the sensor chain...

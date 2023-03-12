@@ -13,32 +13,181 @@
 #include "rtc_rp2040.h"
 #include "nRF24L01.h"
 
-static char         szTemp[32];
+#define NRF24L01_REMOTE_ADDRESS         "AZ438"
+#define NRF24L01_LOCAL_ADDRESS          "AZ437"
 
-void _powerUp(spi_inst_t * spi) {
-    uint8_t             statusReg;
-    uint8_t             configReg;
+typedef struct {
+    uint8_t         CONFIG;
+    uint8_t         EN_AA;
+    uint8_t         EN_RXADDR;
+    uint8_t         SETUP_AW;
+    uint8_t         SETUP_RETR;
+    uint8_t         RF_CH;
+    uint8_t         RF_SETUP;
+    uint8_t         STATUS;
+    uint8_t         RXADDR_P[6][5];
+    uint8_t         TXADDR[5];
+    uint8_t         RX_PW_P[6];
+    uint8_t         FIFO_STATUS;
+    uint8_t         DYNPD;
+    uint8_t         FEATURE;
+}
+nRF24_reg_map_t;
 
-    spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_R_REGISTER | NRF24L01_REG_CONFIG, &statusReg, true);
-    spiReadByte(spi, NRF24L01_SPI_PIN_CSN, &configReg, false);
+static char             szTemp[32];
+static nRF24_reg_map_t  _registerMap;
 
-    configReg |= 0x02;
+size_t _getAddressWidth() {
+    return (size_t)(_registerMap.SETUP_AW + 2);
+}
 
-    spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_W_REGISTER | NRF24L01_REG_CONFIG, &statusReg, true);
-    spiWriteByte(spi, NRF24L01_SPI_PIN_CSN, configReg, false);
+void _updateRegMap(uint8_t reg, uint8_t value) {
+    switch (reg) {
+        case NRF24L01_REG_CONFIG:
+            _registerMap.CONFIG = value;
+            break;
+
+        case NRF24L01_REG_EN_AA:
+            _registerMap.EN_AA = value;
+            break;
+
+        case NRF24L01_REG_EN_RXADDR:
+            _registerMap.EN_RXADDR = value;
+            break;
+
+        case NRF24L01_REG_SETUP_AW:
+            _registerMap.SETUP_AW = value;
+            break;
+
+        case NRF24L01_REG_SETUP_RETR:
+            _registerMap.SETUP_RETR = value;
+            break;
+
+        case NRF24L01_REG_RF_CH:
+            _registerMap.RF_CH = value;
+            break;
+
+        case NRF24L01_REG_RF_SETUP:
+            _registerMap.RF_SETUP = value;
+            break;
+
+        case NRF24L01_REG_STATUS:
+            _registerMap.STATUS = value;
+            break;
+
+        case NRF24L01_REG_RX_ADDR_PO:
+        case NRF24L01_REG_RX_ADDR_P1:
+        case NRF24L01_REG_RX_ADDR_P2:
+        case NRF24L01_REG_RX_ADDR_P3:
+        case NRF24L01_REG_RX_ADDR_P4:
+        case NRF24L01_REG_RX_ADDR_P5:
+            break;
+
+        case NRF24L01_REG_RX_PW_P0:
+        case NRF24L01_REG_RX_PW_P1:
+        case NRF24L01_REG_RX_PW_P2:
+        case NRF24L01_REG_RX_PW_P3:
+        case NRF24L01_REG_RX_PW_P4:
+        case NRF24L01_REG_RX_PW_P5:
+            _registerMap.RX_PW_P[reg - NRF24L01_REG_RX_PW_P0] = value;
+            break;
+
+        case NRF24L01_REG_FIFO_STATUS:
+            _registerMap.FIFO_STATUS = value;
+            break;
+
+        case NRF24L01_REG_DYNPD:
+            _registerMap.DYNPD = value;
+            break;
+
+        case NRF24L01_REG_FEATURE:
+            _registerMap.FEATURE = value;
+            break;
+    }
+}
+
+void nRF24L01_writeRegister(spi_inst_t * spi, uint8_t reg, uint8_t value, uint8_t * pStatusReg) {
+    int         bytesTransferred;
+
+    bytesTransferred = spiWriteReadByte(
+                            spi, 
+                            NRF24L01_SPI_PIN_CSN, 
+                            NRF24L01_CMD_W_REGISTER | reg, 
+                            pStatusReg, 
+                            true);
+
+    if (!bytesTransferred) {
+        return;
+    }
+
+    bytesTransferred = spiWriteByte(
+                            spi, 
+                            NRF24L01_SPI_PIN_CSN, 
+                            value, 
+                            false);
+
+    if (bytesTransferred) {
+        _updateRegMap(reg, value);
+    }
+}
+
+uint8_t nRF24L01_readRegister(spi_inst_t * spi, uint8_t reg, uint8_t * pStatusReg) {
+    uint8_t             value;
+
+    spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_R_REGISTER | reg, pStatusReg, true);
+    spiReadByte(spi, NRF24L01_SPI_PIN_CSN, &value, false);
+
+    return value;
+}
+
+void _powerUpTx(spi_inst_t * spi) {
+    uint8_t         statusReg;
+
+    _registerMap.CONFIG &= ~NRF24L01_CFG_MODE_RX;
+    _registerMap.CONFIG |= (NRF24L01_CFG_MODE_TX | NRF24L01_CFG_POWER_UP);
+    nRF24L01_writeRegister(spi, NRF24L01_REG_CONFIG, _registerMap.CONFIG, &statusReg);
+}
+
+void _powerUpRx(spi_inst_t * spi) {
+    uint8_t         statusReg;
+
+    _registerMap.CONFIG |= (NRF24L01_CFG_MODE_RX | NRF24L01_CFG_POWER_UP);
+    nRF24L01_writeRegister(spi, NRF24L01_REG_CONFIG, _registerMap.CONFIG, &statusReg);
 }
 
 void _powerDown(spi_inst_t * spi) {
-    uint8_t             statusReg;
-    uint8_t             configReg;
+    uint8_t         statusReg;
 
-    spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_R_REGISTER | NRF24L01_REG_CONFIG, &statusReg, true);
-    spiReadByte(spi, NRF24L01_SPI_PIN_CSN, &configReg, false);
+    _registerMap.CONFIG &= ~NRF24L01_CFG_POWER_UP;
+    nRF24L01_writeRegister(spi, NRF24L01_REG_CONFIG, _registerMap.CONFIG, &statusReg);
+}
 
-    configReg &= 0xFD;
+void _setRxAddress(spi_inst_t * spi, int pipe, const char * pszAddress) {
+    uint8_t         statusReg;
 
-    spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_W_REGISTER | NRF24L01_REG_CONFIG, &statusReg, true);
-    spiWriteByte(spi, NRF24L01_SPI_PIN_CSN, configReg, false);
+    memcpy(&_registerMap.RXADDR_P[pipe][0], pszAddress, _getAddressWidth());
+
+    spiWriteReadByte(
+                spi, 
+                NRF24L01_SPI_PIN_CSN, 
+                NRF24L01_CMD_W_REGISTER | (NRF24L01_REG_RX_ADDR_PO + pipe), 
+                &statusReg, 
+                true);
+    spiWriteData(spi, NRF24L01_SPI_PIN_CSN, &_registerMap.RXADDR_P[pipe][0], _getAddressWidth(), false);
+}
+
+void _setTxAddress(spi_inst_t * spi, const char * pszAddress) {
+    uint8_t         statusReg;
+
+    memcpy(&_registerMap.TXADDR[0], pszAddress, _getAddressWidth());
+
+    spiWriteReadByte(
+                spi, 
+                NRF24L01_SPI_PIN_CSN, 
+                NRF24L01_CMD_W_REGISTER | NRF24L01_REG_TX_ADDR, 
+                &statusReg, 
+                true);
+    spiWriteData(spi, NRF24L01_SPI_PIN_CSN, &_registerMap.TXADDR[0], _getAddressWidth(), false);
 }
 
 int _transmit(
@@ -85,9 +234,6 @@ int _transmit(
 int nRF24L01_setup(spi_inst_t * spi) {
     int             error = 0;
     uint8_t         statusReg = 0;
-    uint8_t         configReg = 0;
-    uint8_t         configData[8];
-    uint8_t         txAddr[5]; // {0xE0, 0xE0, 0xF1, 0xF1, 0xE0};
 
 	/*
 	** SPI CSn
@@ -112,74 +258,44 @@ int nRF24L01_setup(spi_inst_t * spi) {
 
     sleep_ms(100);
 
-    configData[0] = 0x7E;       // CONFIG register
-    configData[1] = 0x00;       // EN_AA register
-    configData[2] = 0x01;       // EN_RXADDR register
-    configData[3] = 0x03;       // SETUP_AW register
-    configData[4] = 0x00;       // SETUP_RETR register
-    configData[5] = 40;         // RF_CH register
-    configData[6] = 0x07;       // RF_SETUP register
-    configData[7] = 0x70;       // STATUS register
-
-    spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_W_REGISTER | NRF24L01_REG_CONFIG, &statusReg, true);
-    spiWriteByte(spi, NRF24L01_SPI_PIN_CSN, configData[0], false);
+    nRF24L01_writeRegister(
+                    spi, 
+                    NRF24L01_REG_CONFIG, 
+                    NRF24L01_CFG_MASK_MAX_RT |
+                    NRF24L01_CFG_MASK_RX_DR |
+                    NRF24L01_CFG_MASK_TX_DS |
+                    NRF24L01_CFG_CRC_2_BYTE, 
+                    &statusReg);
 
     sleep_ms(2);
 
-    spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_R_REGISTER | NRF24L01_REG_CONFIG, &statusReg, true);
-    spiReadByte(spi, NRF24L01_SPI_PIN_CSN, &configReg, false);
+    nRF24L01_writeRegister(spi, NRF24L01_REG_EN_AA, 0x00, &statusReg);
+    nRF24L01_writeRegister(spi, NRF24L01_REG_EN_RXADDR, 0x01, &statusReg);
+    nRF24L01_writeRegister(spi, NRF24L01_REG_SETUP_AW, 0x03, &statusReg);
+    nRF24L01_writeRegister(spi, NRF24L01_REG_SETUP_RETR, 0x00, &statusReg);
+    nRF24L01_writeRegister(spi, NRF24L01_REG_RF_CH, 40, &statusReg);
 
-    sprintf(szTemp, "Cfg: 0x%02X\n", configReg);
-    uart_puts(uart0, szTemp);
+    nRF24L01_writeRegister(
+                    spi, 
+                    NRF24L01_REG_RF_SETUP, 
+                    NRF24L01_RF_SETUP_RF_POWER_MEDIUM | 
+                    NRF24L01_RF_SETUP_RF_LNA_GAIN_ON | 
+                    NRF24L01_RF_SETUP_DATA_RATE_1MBPS, 
+                    &statusReg);
 
-    spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_W_REGISTER | NRF24L01_REG_EN_AA, &statusReg, true);
-    spiWriteByte(spi, NRF24L01_SPI_PIN_CSN, configData[1], false);
-
-    spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_W_REGISTER | NRF24L01_REG_EN_RXADDR, &statusReg, true);
-    spiWriteByte(spi, NRF24L01_SPI_PIN_CSN, configData[2], false);
-
-    spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_W_REGISTER | NRF24L01_REG_SETUP_AW, &statusReg, true);
-    spiWriteByte(spi, NRF24L01_SPI_PIN_CSN, configData[3], false);
-
-    spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_W_REGISTER | NRF24L01_REG_SETUP_RETR, &statusReg, true);
-    spiWriteByte(spi, NRF24L01_SPI_PIN_CSN, configData[4], false);
-
-    spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_W_REGISTER | NRF24L01_REG_RF_CH, &statusReg, true);
-    spiWriteByte(spi, NRF24L01_SPI_PIN_CSN, configData[5], false);
-
-    spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_W_REGISTER | NRF24L01_REG_RF_SETUP, &statusReg, true);
-    spiWriteByte(spi, NRF24L01_SPI_PIN_CSN, configData[6], false);
-
-    spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_W_REGISTER | NRF24L01_REG_STATUS, &statusReg, true);
-    spiWriteByte(spi, NRF24L01_SPI_PIN_CSN, configData[7], false);
+    nRF24L01_writeRegister(
+                    spi, 
+                    NRF24L01_REG_STATUS, 
+                    NRF24L01_STATUS_CLEAR_MAX_RT |
+                    NRF24L01_STATUS_CLEAR_RX_DR |
+                    NRF24L01_STATUS_CLEAR_TX_DS, 
+                    &statusReg);
 
     sprintf(szTemp, "St: 0x%02X\n", statusReg);
     uart_puts(uart0, szTemp);
 
-    txAddr[0] = 'A';
-    txAddr[1] = 'Z';
-    txAddr[2] = '4';
-    txAddr[3] = '3';
-    txAddr[4] = '8';
-
-    spiWriteReadByte(
-                spi, 
-                NRF24L01_SPI_PIN_CSN, 
-                NRF24L01_CMD_W_REGISTER | NRF24L01_REG_RX_ADDR_PO, 
-                &statusReg, 
-                true);
-    spiWriteData(spi, NRF24L01_SPI_PIN_CSN, txAddr, 5, false);
-
-    spiWriteReadByte(
-                spi, 
-                NRF24L01_SPI_PIN_CSN, 
-                NRF24L01_CMD_W_REGISTER | NRF24L01_REG_TX_ADDR, 
-                &statusReg, 
-                true);
-    spiWriteData(spi, NRF24L01_SPI_PIN_CSN, txAddr, 5, false);
-
-    sprintf(szTemp, "St: 0x%02X\n", statusReg);
-    uart_puts(uart0, szTemp);
+    _setRxAddress(spi, 0, NRF24L01_LOCAL_ADDRESS);
+    _setTxAddress(spi, NRF24L01_LOCAL_ADDRESS);
 
     /*
     ** Activate additional features...
@@ -188,12 +304,22 @@ int nRF24L01_setup(spi_inst_t * spi) {
     spiWriteByte(spi, NRF24L01_SPI_PIN_CSN, 0x73, false);
 
     /*
-    ** Enable NOACK transmit...
+    ** Enable NOACK transmit & dynamic payload length...
     */
-    spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_W_REGISTER | NRF24L01_REG_FEATURE, &statusReg, true);
-    spiWriteByte(spi, NRF24L01_SPI_PIN_CSN, 0x01, false);
+    nRF24L01_writeRegister(
+                spi, 
+                NRF24L01_REG_FEATURE, 
+                NRF24L01_FEATURE_EN_TX_NO_ACK | 
+                NRF24L01_FEATURE_EN_DYN_PAYLOAD_LEN, 
+                &statusReg);
 
-//    _powerUp(spi);
+    nRF24L01_writeRegister(
+                spi, 
+                NRF24L01_REG_DYNPD, 
+                0x01, 
+                &statusReg);
+
+    _powerUpTx(spi);
 
     return error;
 }

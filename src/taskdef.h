@@ -5,7 +5,8 @@
 #define TASK_WATCHDOG           0x0200
 #define TASK_DEBUG              0x0300
 #define TASK_READ_TEMP          0x0400
-#define TASK_READ_HUMIDITY      0x0401
-#define TASK_READ_PRESSURE      0x0402
+#define TASK_READ_HUMIDITY_1    0x0401
+#define TASK_READ_HUMIDITY_2    0x0402
+#define TASK_READ_PRESSURE      0x0403
 
 #endif

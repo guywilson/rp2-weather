@@ -1,0 +1,7 @@
+.program pulse
+
+; PIO pulse counter implementation
+loop:
+    wait    0 pin 16
+    wait    1 pin 16
+    jmp     X-- loop

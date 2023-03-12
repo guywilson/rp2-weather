@@ -55,43 +55,38 @@ int tmp117_setup(i2c_inst_t * i2c) {
 }
 
 int initSensors(i2c_inst_t * i2c) {
-    int         rtn;
-
-    rtn = tmp117_setup(i2c);
-
-    if (rtn) {
-        return rtn;
-    }
-
-    return 0;
+    return tmp117_setup(i2c);
 }
 
 void taskReadTemp(PTASKPARM p) {
     uint8_t             tempRegister[2];
     int16_t             tempInt;
-    // sensor_chain_t *    sensor = (sensor_chain_t *)p;
 
     i2cReadRegister(i2c0, TMP117_ADDRESS, TMP117_REG_TEMP, tempRegister, 2);
 
     tempInt = (int16_t)((((int16_t)tempRegister[0]) << 8) | (int16_t)tempRegister[1]);
     weather.temperature = (float)tempInt * 0.0078125;
 
-    // memcpy(buffer, &weather, sizeof(weather_packet_t));
-    // nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
-
-    // sensor = (sensor_chain_t *)sensor->next;
-
-    scheduleTaskOnce(TASK_READ_HUMIDITY, rtc_val_ms(4000), NULL);
+    scheduleTaskOnce(TASK_READ_HUMIDITY_1, rtc_val_ms(4000), NULL);
 }
 
-void taskReadHumidity(PTASKPARM p) {
+void taskReadHumidity_step1(PTASKPARM p) {
+    uint8_t             reg;
+
+    reg = SHT4X_CMD_MEASURE_HI_PRN;
+
+    i2c_write_blocking(i2c0, SHT4X_ADDRESS, &reg, 1, true);
+
+    scheduleTaskOnce(TASK_READ_HUMIDITY_2, rtc_val_ms(10), NULL);
+}
+
+void taskReadHumidity_step2(PTASKPARM p) {
     uint8_t             regBuffer[6];
     uint16_t            humidityResp;
-    // sensor_chain_t *    sensor = (sensor_chain_t *)p;
 
-    i2cReadRegister(i2c0, SHT4X_ADDRESS, SHT4X_CMD_MEASURE_HI_PRN, regBuffer, 6);
+    i2c_read_blocking(i2c0, SHT4X_ADDRESS, regBuffer, 6, false);
 
-    humidityResp = (uint16_t)regBuffer[3];
+    memcpy(&humidityResp, &regBuffer[3], sizeof(uint16_t));
 
     weather.humidity = -6.0f + ((float)humidityResp * 0.0019074);
 
@@ -102,21 +97,16 @@ void taskReadHumidity(PTASKPARM p) {
         weather.humidity = 100.0;
     }
 
-    // sensor = (sensor_chain_t *)sensor->next;
-
-    scheduleTaskOnce(TASK_READ_PRESSURE, rtc_val_ms(4000), NULL);
+    scheduleTaskOnce(TASK_READ_PRESSURE, rtc_val_ms(3990), NULL);
 }
 
 void taskReadPressure(PTASKPARM p) {
     static uint8_t      buffer[sizeof(weather_packet_t)];
-    // sensor_chain_t *    sensor = (sensor_chain_t *)p;
 
     weather.pressure = 1021.41;
 
     memcpy(buffer, &weather, sizeof(weather_packet_t));
-    nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
-
-    // sensor = (sensor_chain_t *)sensor->next;
+    nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), true);
 
     scheduleTaskOnce(TASK_READ_TEMP, rtc_val_ms(4000), NULL);
 }
