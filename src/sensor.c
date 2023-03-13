@@ -7,6 +7,9 @@
 #include "hardware/i2c.h"
 #include "hardware/spi.h"
 #include "hardware/timer.h"
+#include "hardware/address_mapped.h"
+#include "hardware/regs/tbman.h"
+#include "hardware/regs/sysinfo.h"
 #include "scheduler.h"
 #include "taskdef.h"
 #include "i2c_rp2040.h"
@@ -55,6 +58,8 @@ int tmp117_setup(i2c_inst_t * i2c) {
 }
 
 int initSensors(i2c_inst_t * i2c) {
+    weather.chipID = * ((io_ro_32 *)(SYSINFO_BASE + SYSINFO_CHIP_ID_OFFSET));
+
     return tmp117_setup(i2c);
 }
 

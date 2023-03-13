@@ -28,10 +28,6 @@
 
 #define SPI0_CSEL_PIN				22
 
-void watchdog_disable(void) {
-	hw_clear_bits(&watchdog_hw->ctrl, WATCHDOG_CTRL_ENABLE_BITS);
-}
-
 void setup(void) {
 	/*
 	** Disable the Watchdog, if we have restarted due to a
@@ -43,12 +39,6 @@ void setup(void) {
 	setupRTC();
 
 	setupSerial();
-
-	/*
-	** Allow us to plug in the USB cable to
-	** debug setup...
-	*/
-	sleep_ms(5000);
 
 	i2c_init(i2c0, 400000);
 

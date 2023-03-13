@@ -18,9 +18,10 @@ typedef struct {
     int16_t             rawTemperature;             // 0x0E - Raw I2C TMP117 value
     uint16_t            rawPressure;                // 0x10 - Raw I2C pressure value
     uint16_t            rawHumidity;                // 0x12 - Raw I2C SHT4x value
-    uint16_t            rawRainfall;                // 0x14 - Raw rain sensor count
-    uint16_t            rawWindspeed;               // 0x16 - Raw anemometer count
-    uint16_t            rawWindDir;                 // 0x18 - Raw wind direction
+    uint16_t            rawLux;                     // 0x14 - Raw I2C lux value
+    uint16_t            rawRainfall;                // 0x16 - Raw rain sensor count
+    uint16_t            rawWindspeed;               // 0x18 - Raw anemometer count
+    uint16_t            rawWindDir;                 // 0x1A - Raw wind direction
 }
 weather_packet_t;
 

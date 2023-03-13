@@ -306,18 +306,23 @@ int nRF24L01_setup(spi_inst_t * spi) {
     /*
     ** Enable NOACK transmit & dynamic payload length...
     */
+    // nRF24L01_writeRegister(
+    //             spi, 
+    //             NRF24L01_REG_FEATURE, 
+    //             NRF24L01_FEATURE_EN_TX_NO_ACK | 
+    //             NRF24L01_FEATURE_EN_DYN_PAYLOAD_LEN, 
+    //             &statusReg);
     nRF24L01_writeRegister(
                 spi, 
                 NRF24L01_REG_FEATURE, 
-                NRF24L01_FEATURE_EN_TX_NO_ACK | 
-                NRF24L01_FEATURE_EN_DYN_PAYLOAD_LEN, 
+                NRF24L01_FEATURE_EN_TX_NO_ACK, 
                 &statusReg);
 
-    nRF24L01_writeRegister(
-                spi, 
-                NRF24L01_REG_DYNPD, 
-                0x01, 
-                &statusReg);
+    // nRF24L01_writeRegister(
+    //             spi, 
+    //             NRF24L01_REG_DYNPD, 
+    //             0x01, 
+    //             &statusReg);
 
     _powerUpTx(spi);
 
