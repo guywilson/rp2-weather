@@ -295,7 +295,7 @@ int nRF24L01_setup(spi_inst_t * spi) {
     uart_puts(uart0, szTemp);
 
     _setRxAddress(spi, 0, NRF24L01_LOCAL_ADDRESS);
-    _setTxAddress(spi, NRF24L01_LOCAL_ADDRESS);
+    _setTxAddress(spi, NRF24L01_REMOTE_ADDRESS);
 
     /*
     ** Activate additional features...
