@@ -21,6 +21,14 @@
 
 weather_packet_t            weather;
 
+inline int16_t copyI2CReg_int16(uint8_t * reg) {
+    return ((int16_t)((((int16_t)reg[0]) << 8) | (int16_t)reg[1]));
+}
+
+inline uint16_t copyI2CReg_uint16(uint8_t * reg) {
+    return ((uint16_t)((((uint16_t)reg[0]) << 8) | (uint16_t)reg[1]));
+}
+
 int tmp117_setup(i2c_inst_t * i2c) {
     int                 error = 0;
     uint8_t             deviceIDValue[2];
@@ -68,7 +76,7 @@ void taskReadTemp(PTASKPARM p) {
 
     i2cReadRegister(i2c0, TMP117_ADDRESS, TMP117_REG_TEMP, tempRegister, 2);
 
-    weather.rawTemperature = (int16_t)((((int16_t)tempRegister[0]) << 8) | (int16_t)tempRegister[1]);
+    weather.rawTemperature = copyI2CReg_int16(tempRegister);
 
     scheduleTaskOnce(TASK_READ_HUMIDITY_1, rtc_val_ms(4000), NULL);
 }
@@ -80,7 +88,7 @@ void taskReadHumidity_step1(PTASKPARM p) {
 
     i2c_write_blocking(i2c0, SHT4X_ADDRESS, &reg, 1, true);
 
-    scheduleTaskOnce(TASK_READ_HUMIDITY_2, rtc_val_ms(10), NULL);
+    scheduleTaskOnce(TASK_READ_HUMIDITY_2, rtc_val_ms(15), NULL);
 }
 
 void taskReadHumidity_step2(PTASKPARM p) {
@@ -88,9 +96,10 @@ void taskReadHumidity_step2(PTASKPARM p) {
 
     i2c_read_blocking(i2c0, SHT4X_ADDRESS, regBuffer, 6, false);
 
-    memcpy(&weather.rawHumidity, &regBuffer[3], sizeof(uint16_t));
+    weather.rawHumidity[0] = copyI2CReg_uint16(&regBuffer[0]);
+    weather.rawHumidity[1] = copyI2CReg_uint16(&regBuffer[3]);
 
-    scheduleTaskOnce(TASK_READ_PRESSURE, rtc_val_ms(3990), NULL);
+    scheduleTaskOnce(TASK_READ_PRESSURE, rtc_val_ms(3985), NULL);
 }
 
 void taskReadPressure(PTASKPARM p) {
