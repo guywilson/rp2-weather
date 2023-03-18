@@ -6,6 +6,7 @@
 #ifndef __INCL_I2C_SENSOR
 #define __INCL_I2C_SENSOR
 
+#pragma pack(push, 1)
 typedef struct {
     uint32_t            chipID;                     // 0x00 - ID of the RP2040
 
@@ -23,6 +24,7 @@ typedef struct {
     uint16_t            rawWindDir;                 // 0x1A - Raw wind direction
 }
 weather_packet_t;
+#pragma pack(pop)
 
 int     initSensors(i2c_inst_t * i2c);
 void    taskReadTemp(PTASKPARM p);
