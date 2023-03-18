@@ -64,14 +64,15 @@ int main(void) {
 		turnOff(LED_ONBOARD);
 	}
 
-	initScheduler(6);
+	initScheduler(7);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &WatchdogTask);
 	registerTask(TASK_READ_TEMP, &taskReadTemp);
 	registerTask(TASK_READ_HUMIDITY_1, &taskReadHumidity_step1);
 	registerTask(TASK_READ_HUMIDITY_2, &taskReadHumidity_step2);
-	registerTask(TASK_READ_PRESSURE, &taskReadPressure);
+	registerTask(TASK_READ_PRESSURE_1, &taskReadPressure_step1);
+	registerTask(TASK_READ_PRESSURE_2, &taskReadPressure_step2);
 
 	scheduleTaskOnce(
 			TASK_HEARTBEAT,
