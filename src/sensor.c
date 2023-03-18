@@ -38,6 +38,7 @@ int initSensors(i2c_inst_t * i2c) {
 
 void taskI2CSensor(PTASKPARM p) {
     static int          state = STATE_READ_TEMP;
+    int                 error;
     rtc_t               delay = rtc_val_ms(4000);
     uint32_t            rawPressure;
     uint16_t            rawTemperature;
@@ -76,7 +77,17 @@ void taskI2CSensor(PTASKPARM p) {
             buffer[0] = 0x70;
             buffer[1] = 0xDF;
 
-            i2c_write_blocking(i2c0, ICP10215_ADDRESS, buffer, 2, true);
+            error = i2c_write_blocking(i2c0, ICP10215_ADDRESS, buffer, 2, true);
+
+            if (error == PICO_ERROR_GENERIC) {
+                uart_puts(uart0, "Failed to address pressure sensor\n");
+            }
+            else if (error == 0) {
+                uart_puts(uart0, "Wrote 0 bytes to pressure sensor\n");
+            }
+            else {
+                uart_puts(uart0, "Successfully wrote bytes to pressure sensor\n");
+            }
 
             delay = rtc_val_ms(25);
 
@@ -84,7 +95,17 @@ void taskI2CSensor(PTASKPARM p) {
             break;
 
         case STATE_READ_PRESSURE_2:
-            i2c_read_blocking(i2c0, ICP10215_ADDRESS, buffer, 9, false);
+            error = i2c_read_blocking(i2c0, ICP10215_ADDRESS, buffer, 9, false);
+
+            if (error == PICO_ERROR_GENERIC) {
+                uart_puts(uart0, "Failed to address pressure sensor\n");
+            }
+            else if (error == 0) {
+                uart_puts(uart0, "Read 0 bytes from pressure sensor\n");
+            }
+            else if (error == 9) {
+                uart_puts(uart0, "Successfully read 9 bytes from pressure sensor\n");
+            }
 
             rawTemperature = 
                 (uint16_t)(((uint16_t)buffer[0] << 8) | 
