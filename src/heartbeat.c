@@ -3,7 +3,7 @@
 
 #include "rtc_rp2040.h"
 #include "heartbeat.h"
-#include "led_utils.h"
+#include "utils.h"
 #include "taskdef.h"
 
 #define HEARTBEAT_ON_TIME                50

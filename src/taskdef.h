@@ -4,11 +4,6 @@
 #define TASK_HEARTBEAT			0x0100
 #define TASK_WATCHDOG           0x0200
 #define TASK_DEBUG              0x0300
-#define TASK_READ_TEMP          0x0400
-#define TASK_READ_HUMIDITY_1    0x0401
-#define TASK_READ_HUMIDITY_2    0x0402
-#define TASK_READ_PRESSURE_1    0x0403
-#define TASK_READ_PRESSURE_2    0x0404
-#define TASK_READ_LUX           0x0405
+#define TASK_I2C_SENSOR         0x0400
 
 #endif

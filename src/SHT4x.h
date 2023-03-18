@@ -16,4 +16,6 @@
 #define SHT4X_CMD_READ_SERIAL_NO                    0x89
 #define SHT4X_CMD_SOFT_RESET                        0x94
 
+int         sht4x_setup(i2c_inst_t * i2c);
+
 #endif

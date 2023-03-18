@@ -27,10 +27,6 @@ weather_packet_t;
 #pragma pack(pop)
 
 int     initSensors(i2c_inst_t * i2c);
-void    taskReadTemp(PTASKPARM p);
-void    taskReadHumidity_step1(PTASKPARM p);
-void    taskReadHumidity_step2(PTASKPARM p);
-void    taskReadPressure_step1(PTASKPARM p);
-void    taskReadPressure_step2(PTASKPARM p);
+void    taskI2CSensor(PTASKPARM p);
 
 #endif

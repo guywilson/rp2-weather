@@ -1,6 +1,7 @@
+#include <stdint.h>
 #include "pico/stdlib.h"
 
-#include "led_utils.h"
+#include "utils.h"
 
 const uint LED_PIN = PICO_DEFAULT_LED_PIN;
 
@@ -32,4 +33,12 @@ void toggleLED(int LED_ID)
 		turnOff(LED_PIN);
 		state = 0;
 	}
+}
+
+inline int16_t copyI2CReg_int16(uint8_t * reg) {
+    return ((int16_t)((((int16_t)reg[0]) << 8) | (int16_t)reg[1]));
+}
+
+inline uint16_t copyI2CReg_uint16(uint8_t * reg) {
+    return ((uint16_t)((((uint16_t)reg[0]) << 8) | (uint16_t)reg[1]));
 }

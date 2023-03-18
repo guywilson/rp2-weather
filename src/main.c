@@ -21,7 +21,7 @@
 #include "debug.h"
 #include "sensor.h"
 #include "nRF24L01.h"
-#include "led_utils.h"
+#include "utils.h"
 
 #define I2C_SDA_ALT_PIN				16
 #define I2C_SLK_ALT_PIN				17
@@ -64,15 +64,11 @@ int main(void) {
 		turnOff(LED_ONBOARD);
 	}
 
-	initScheduler(7);
+	initScheduler(3);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &WatchdogTask);
-	registerTask(TASK_READ_TEMP, &taskReadTemp);
-	registerTask(TASK_READ_HUMIDITY_1, &taskReadHumidity_step1);
-	registerTask(TASK_READ_HUMIDITY_2, &taskReadHumidity_step2);
-	registerTask(TASK_READ_PRESSURE_1, &taskReadPressure_step1);
-	registerTask(TASK_READ_PRESSURE_2, &taskReadPressure_step2);
+	registerTask(TASK_I2C_SENSOR, &taskI2CSensor);
 
 	scheduleTaskOnce(
 			TASK_HEARTBEAT,
@@ -83,7 +79,7 @@ int main(void) {
 	** Start the sensor chain...
 	*/
 	scheduleTaskOnce(
-			TASK_READ_TEMP, 
+			TASK_I2C_SENSOR, 
 			rtc_val_ms(4000), 
 			NULL);
 
