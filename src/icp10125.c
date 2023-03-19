@@ -74,7 +74,7 @@ int icp10125_setup(i2c_inst_t * i2c) {
     otpCmdBuf[3] = 0x66;
     otpCmdBuf[4] = 0x9C;
 
-    error = i2c_write_blocking(i2c, ICP10215_ADDRESS, otpCmdBuf, 5, false);
+    error = i2c_write_blocking(i2c, ICP10125_ADDRESS, otpCmdBuf, 5, false);
 
     if (error == PICO_ERROR_GENERIC) {
         return -1;
@@ -87,8 +87,8 @@ int icp10125_setup(i2c_inst_t * i2c) {
     otpReadCmd[1] = 0xF7;
 
     for (i = 0; i < 4; i++) {
-        i2c_write_blocking(i2c, 0x63, otpReadCmd, 2, true);
-        i2c_read_blocking(i2c, 0x63, otpReadData, 3, false);
+        i2c_write_blocking(i2c, ICP10125_ADDRESS, otpReadCmd, 2, true);
+        i2c_read_blocking(i2c, ICP10125_ADDRESS, otpReadData, 3, false);
 
         s->sensor_constants[i] = (float)((uint16_t)otpReadData[0] << 8 | (uint16_t)otpReadData[1]);
     }
