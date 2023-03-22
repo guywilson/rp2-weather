@@ -44,7 +44,7 @@ void setup(void) {
     gpio_set_function(I2C_SDA_ALT_PIN, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SLK_ALT_PIN, GPIO_FUNC_I2C);
 
-    lgOpen(uart0, LOG_LEVEL_ALL);
+    lgOpen(uart0, LOG_LEVEL_FATAL | LOG_LEVEL_ERROR);
 
 	if (initSensors(i2c0)) {
 		lgLogError("ERR: Sensor init");
