@@ -3,10 +3,7 @@
 #include <stdint.h>
 
 #include "hardware/i2c.h"
-#include "scheduler.h"
-#include "taskdef.h"
 #include "i2c_rp2040.h"
-#include "rtc_rp2040.h"
 #include "TMP117.h"
 
 int tmp117_setup(i2c_inst_t * i2c) {
@@ -36,10 +33,10 @@ int tmp117_setup(i2c_inst_t * i2c) {
     error = i2cWriteRegister(i2c0, TMP117_ADDRESS, TMP117_REG_CONFIG, configData, 2);
 
     if (error == PICO_ERROR_GENERIC) {
-        uart_puts(uart0, "ERR_GEN\n");
+        return -1;
     }
     else if (error == PICO_ERROR_TIMEOUT) {
-        uart_puts(uart0, "ERR_TM\n");
+        return -1;
     }
 
     return 0;

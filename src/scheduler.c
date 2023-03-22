@@ -109,8 +109,11 @@ volatile uint32_t			_idleCount = 0;
 void 						(* _tickTask)() = &_nullTickTask;
 
 #ifdef PICO_MULTICORE
+#define CORE1_TASKDESC_POOL_SIZE                5
 volatile bool				isCoreOneBusy = false;
-volatile bool				isCoreOneHealthy = false;
+PTASKDESC                   core1TaskDescPool;
+#else
+#define CORE1_TASKDESC_POOL_SIZE                0
 #endif
 
 #define getRTCClockCount()	(_realTimeClock)
@@ -210,32 +213,21 @@ void core1FifoDataAvailableHandler() {
 	PTASKDESC			td = NULL;
 	uint32_t			data = 0;
 
-	if (multicore_fifo_rvalid()) {
-		data = multicore_fifo_pop_blocking();
+    data = multicore_fifo_pop_blocking();
 
-		td = (PTASKDESC)(data);
+    td = (PTASKDESC)(data);
 
-		/*
-		** Run the task here (on core 1)...
-		*/
-		isCoreOneBusy = true;
-		td->run(td->pParameter);
-		isCoreOneBusy = false;
-	}
-	else {
-		/*
-		** We've got an interrupt to tell is there is data
-		** in the FIFO but there doesn't appear to be any,
-		** this is an error condition...
-		*/
-		isCoreOneHealthy = false;
-	}
+    /*
+    ** Run the task here (on core 1)...
+    */
+    isCoreOneBusy = true;
+    td->run(td->pParameter);
+    td->isAllocated = 0;
+    isCoreOneBusy = false;
 }
 
 void _core1_main(void)
 {
-	isCoreOneHealthy = true;
-
     irq_set_exclusive_handler(SIO_IRQ_PROC1, core1FifoDataAvailableHandler);
     irq_set_enabled(SIO_IRQ_PROC1, true);
 
@@ -243,41 +235,7 @@ void _core1_main(void)
 		__sleep();
 	}
 }
-
-void ResetCore1(void)
-{
-	multicore_reset_core1();
-	multicore_fifo_drain();
-
-	isCoreOneBusy = false;
-
-	/*
-	** Launch the main loop on the 2nd core...
-	*/
-	multicore_launch_core1(_core1_main);
-}
 #endif
-
-void _runTask(PTASKDESC td)
-{
-#ifdef PICO_MULTICORE
-	/*
-	** If core1 is not busy and core1 is healthy
-	** and the taskdesc queue is free,
-	** run the task on core 1 (the default). 
-	** Otherwise run it on core 0. 
-	*/
-	if (isCoreOneHealthy && !isCoreOneBusy) {
-		if (multicore_fifo_push_timeout_us((uint32_t)td, 50)) {
-			return;
-		}
-
-//		uart_puts(uart0, "Push Timeout!\n");
-	}
-#endif
-
-	td->run(td->pParameter);
-}
 
 /******************************************************************************
 **
@@ -407,7 +365,7 @@ printf("Allocated %d tasks\n", taskArrayLength);
 	/*
 	** Allocate memory for task array...
 	*/
-	taskDescs = (PTASKDESC)malloc(taskArrayLength * sizeof(TASKDESC));
+	taskDescs = (PTASKDESC)malloc((taskArrayLength + CORE1_TASKDESC_POOL_SIZE) * sizeof(TASKDESC));
 
 	if (taskDescs == NULL) {
 		handleError(ERROR_SCHED_TASKCOUNTOVERFLOW);
@@ -415,7 +373,7 @@ printf("Allocated %d tasks\n", taskArrayLength);
 
 	taskCount = 0;
 	
-	for (i = 0;i < taskArrayLength;i++) {
+	for (i = 0;i < (taskArrayLength + CORE1_TASKDESC_POOL_SIZE);i++) {
 		td = &taskDescs[i];
 		
 		td->ID				= 0;
@@ -433,6 +391,8 @@ printf("Allocated %d tasks\n", taskArrayLength);
 	}
 
 #ifdef PICO_MULTICORE
+    core1TaskDescPool = &taskDescs[CORE1_TASKDESC_POOL_SIZE];
+
 	/*
 	** Initialise the 2nd core...
 	*/
@@ -705,6 +665,7 @@ void unscheduleTask(uint16_t taskID)
 void schedule()
 {
 	int			i = 0;
+    int         taskPoolCount = 0;
 	PTASKDESC	td = head;
 	
 	/*
@@ -723,15 +684,6 @@ void schedule()
 	while (1) {
 		signalIdle();
 
-#ifdef PICO_MULTICORE
-		if (!isCoreOneHealthy) {
-			/*
-			** Try to clear any error conditiion with core1...
-			*/
-			ResetCore1();
-		}
-#endif
-
 		if (td->isScheduled && getRTCClockCount() >= td->scheduledTime) {
 			/*
 			** Mark the task as un-scheduled, so by default the
@@ -745,7 +697,34 @@ void schedule()
 			** Run the task...
 			*/
 			signalBusy();
-			_runTask(td);
+#ifdef PICO_MULTICORE
+            /*
+            ** If core1 is not busy, run the task on core 1 (the default). 
+            ** Otherwise run it on core 0 (this core) as a fallback. 
+            */
+            if (!isCoreOneBusy) {
+                for (taskPoolCount = 0;taskPoolCount < CORE1_TASKDESC_POOL_SIZE;taskPoolCount++) {
+                    if (!core1TaskDescPool[taskPoolCount].isAllocated) {
+                        memcpy(&core1TaskDescPool[taskPoolCount], td, sizeof(TASKDESC));
+                        if (multicore_fifo_push_timeout_us((uint32_t)&core1TaskDescPool[taskPoolCount], 25)) {
+                            break;
+                        }
+                    }
+                }
+                /*
+                ** if there are no free task descriptors in our pool
+                ** Run the task on core 0...
+                */
+                if (taskPoolCount == CORE1_TASKDESC_POOL_SIZE) {
+                    td->run(td->pParameter);
+                }
+            }
+            else {
+                td->run(td->pParameter);
+            }
+#else
+            td->run(td->pParameter);
+#endif
 
 			if (td->isPeriodic && !td->isScheduled) {
 				rescheduleTask(td->ID, td->pParameter);

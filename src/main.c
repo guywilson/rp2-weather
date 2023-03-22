@@ -18,7 +18,7 @@
 #include "i2c_rp2040.h"
 #include "heartbeat.h"
 #include "watchdog.h"
-#include "debug.h"
+#include "logger.h"
 #include "sensor.h"
 #include "nRF24L01.h"
 #include "utils.h"
@@ -37,7 +37,6 @@ void setup(void) {
 
 	setupLEDPin();
 	setupRTC();
-
 	setupSerial();
 
 	i2c_init(i2c0, 400000);
@@ -45,8 +44,10 @@ void setup(void) {
     gpio_set_function(I2C_SDA_ALT_PIN, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SLK_ALT_PIN, GPIO_FUNC_I2C);
 
+    lgOpen(uart0, LOG_LEVEL_ALL);
+
 	if (initSensors(i2c0)) {
-		uart_puts(uart0, "ERR TMP117\n");
+		lgLogError("ERR: Sensor init");
 		exit(-1);
 	}
 

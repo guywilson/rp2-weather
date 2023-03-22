@@ -34,7 +34,6 @@ typedef struct {
 }
 nRF24_reg_map_t;
 
-static char             szTemp[32];
 static nRF24_reg_map_t  _registerMap;
 
 size_t _getAddressWidth() {
@@ -290,9 +289,6 @@ int nRF24L01_setup(spi_inst_t * spi) {
                     NRF24L01_STATUS_CLEAR_RX_DR |
                     NRF24L01_STATUS_CLEAR_TX_DS, 
                     &statusReg);
-
-    sprintf(szTemp, "St: 0x%02X\n", statusReg);
-    uart_puts(uart0, szTemp);
 
     _setRxAddress(spi, 0, NRF24L01_LOCAL_ADDRESS);
     _setTxAddress(spi, NRF24L01_REMOTE_ADDRESS);
