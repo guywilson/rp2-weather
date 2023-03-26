@@ -39,12 +39,12 @@ void setup(void) {
 	setupRTC();
 	setupSerial();
 
-	i2c_init(i2c0, 400000);
+	i2cInit(i2c0, 400000);
 
     gpio_set_function(I2C_SDA_ALT_PIN, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SLK_ALT_PIN, GPIO_FUNC_I2C);
 
-    lgOpen(uart0, LOG_LEVEL_FATAL | LOG_LEVEL_ERROR);
+    lgOpen(uart0, LOG_LEVEL_ALL);
 
 	if (initSensors(i2c0)) {
 		lgLogError("ERR: Sensor init");
@@ -65,11 +65,13 @@ int main(void) {
 		turnOff(LED_ONBOARD);
 	}
 
-	initScheduler(3);
+	initScheduler(5);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &WatchdogTask);
 	registerTask(TASK_I2C_SENSOR, &taskI2CSensor);
+    registerTask(TASK_I2C_READ, &taskI2CRead);
+    registerTask(TASK_I2C_WRITE, &taskI2CWrite);
 
 	scheduleTaskOnce(
 			TASK_HEARTBEAT,

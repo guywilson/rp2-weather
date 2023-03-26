@@ -1,18 +1,50 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "scheduler.h"
+
 #ifndef __INCL_I2C_RP2040
 #define __INCL_I2C_RP2040
 
 #define I2C_SDA_HOLD                38
 
-int _i2c_read_blocking_debug(
+void taskI2CWrite(PTASKPARM p);
+void taskI2CRead(PTASKPARM p);
+
+uint32_t i2cInit(i2c_inst_t *i2c, uint32_t baudrate);
+
+int i2cTriggerReadRegister(
+                i2c_inst_t * i2c, 
+                uint16_t callbackTask, 
+                rtc_t writeReadDelay, 
+                uint8_t addr, 
+                uint8_t * src,
+                size_t srcLen,
+                uint8_t * dst, 
+                size_t dstLen, 
+                bool nostopWrite,
+                bool nostopRead);
+int i2cTriggerRead(
+            i2c_inst_t * i2c, 
+            uint16_t callbackTask, 
+            uint8_t addr, 
+            uint8_t * dst, 
+            size_t len, 
+            bool nostop);
+int i2cTriggerWrite(
+            i2c_inst_t * i2c, 
+            uint16_t callbackTask, 
+            uint8_t addr, 
+            uint8_t * src, 
+            size_t len, 
+            bool nostop);
+int i2cReadBlocking(
             i2c_inst_t * i2c, 
             uint8_t addr, 
             uint8_t * dst, 
             size_t len, 
             bool nostop);
-int _i2c_write_blocking_debug(
+int i2cWriteBlocking(
             i2c_inst_t * i2c, 
             uint8_t addr, 
             const uint8_t * src, 

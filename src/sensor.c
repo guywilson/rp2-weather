@@ -22,15 +22,18 @@
 #include "nRF24L01.h"
 #include "utils.h"
 
-#define STATE_READ_TEMP          0x0010
-#define STATE_READ_HUMIDITY_1    0x0020
-#define STATE_READ_HUMIDITY_2    0x0030
-#define STATE_READ_PRESSURE_1    0x0040
-#define STATE_READ_PRESSURE_2    0x0050
-#define STATE_READ_PRESSURE_0    0x0055
-#define STATE_READ_LUX           0x0060
+#define STATE_READ_TEMP_1           0x0100
+#define STATE_READ_TEMP_2           0x0101
+#define STATE_READ_HUMIDITY_1       0x0200
+#define STATE_READ_HUMIDITY_2       0x0201
+#define STATE_READ_HUMIDITY_3       0x0202
+#define STATE_READ_PRESSURE_1       0x0300
+#define STATE_READ_PRESSURE_2       0x0301
+#define STATE_READ_PRESSURE_3       0x0302
+#define STATE_READ_LUX              0x0400
 
 weather_packet_t            weather;
+static uint8_t              buffer[32];
 
 int initSensors(i2c_inst_t * i2c) {
     weather.chipID = * ((io_ro_32 *)(SYSINFO_BASE + SYSINFO_CHIP_ID_OFFSET));
@@ -39,18 +42,34 @@ int initSensors(i2c_inst_t * i2c) {
 }
 
 void taskI2CSensor(PTASKPARM p) {
-    static int          state = STATE_READ_TEMP;
+    static int          state = STATE_READ_TEMP_1;
     rtc_t               delay = rtc_val_ms(4000);
     uint8_t             reg;
-    uint8_t             buffer[32];
 
     switch (state) {
-        case STATE_READ_TEMP:
-            lgLogDebug("Rd T");
-            i2cReadRegister(i2c0, TMP117_ADDRESS, TMP117_REG_TEMP, buffer, 2);
+        case STATE_READ_TEMP_1:
+            lgLogDebug("Rd T1");
+            reg = TMP117_REG_TEMP;
+            i2cTriggerReadRegister(
+                            i2c0, 
+                            TASK_I2C_SENSOR, 
+                            rtc_val_ms(5), 
+                            TMP117_ADDRESS, 
+                            &reg, 
+                            1, 
+                            buffer, 
+                            2, 
+                            true, 
+                            false);
+
+            state = STATE_READ_TEMP_2;
+            return;
+
+        case STATE_READ_TEMP_2:
+            lgLogDebug("Rd T2");
             weather.rawTemperature = copyI2CReg_int16(buffer);
 
-            delay = rtc_val_ms(4000);
+            delay = rtc_val_ms(2000);
 
             state = STATE_READ_HUMIDITY_1;
             break;
@@ -58,19 +77,27 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_HUMIDITY_1:
             lgLogDebug("Rd H1");
             reg = SHT4X_CMD_MEASURE_HI_PRN;
-            _i2c_write_blocking_debug(i2c0, SHT4X_ADDRESS, &reg, 1, true);
-
-            delay = rtc_val_ms(10);
+            i2cTriggerReadRegister(
+                            i2c0, 
+                            TASK_I2C_SENSOR, 
+                            rtc_val_ms(10), 
+                            SHT4X_ADDRESS, 
+                            &reg, 
+                            1, 
+                            buffer, 
+                            6, 
+                            true, 
+                            false);
 
             state = STATE_READ_HUMIDITY_2;
-            break;
+            return;
 
         case STATE_READ_HUMIDITY_2:
             lgLogDebug("Rd H2");
-            _i2c_read_blocking_debug(i2c0, SHT4X_ADDRESS, buffer, 6, false);
+
             weather.rawHumidity = copyI2CReg_uint16(&buffer[3]);
 
-            delay = rtc_val_ms(3990);
+            delay = rtc_val_ms(1990);
 
             state = STATE_READ_PRESSURE_1;
             break;
@@ -80,16 +107,23 @@ void taskI2CSensor(PTASKPARM p) {
             buffer[0] = 0x70;
             buffer[1] = 0xDF;
 
-            _i2c_write_blocking_debug(i2c0, ICP10125_ADDRESS, buffer, 2, false);
-
-            delay = rtc_val_ms(25);
+            i2cTriggerReadRegister(
+                            i2c0, 
+                            TASK_I2C_SENSOR, 
+                            rtc_val_ms(24), 
+                            ICP10125_ADDRESS, 
+                            buffer, 
+                            2, 
+                            buffer, 
+                            9, 
+                            false,
+                            false);
 
             state = STATE_READ_PRESSURE_2;
-            break;
+            return;
 
         case STATE_READ_PRESSURE_2:
             lgLogDebug("Rd P2");
-            _i2c_read_blocking_debug(i2c0, ICP10125_ADDRESS, buffer, 9, false);
 
             weather.rawICPTemperature = copyI2CReg_uint16(&buffer[0]);
 
@@ -100,7 +134,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             lgLogDebug("rawT:%d, rawP:%u", weather.rawICPTemperature, weather.rawICPPressure);
 
-            delay = rtc_val_ms(3975);
+            delay = rtc_val_ms(1975);
 
             state = STATE_READ_LUX;
             break;
@@ -112,7 +146,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             delay = rtc_val_ms(4000);
 
-            state = STATE_READ_TEMP;
+            state = STATE_READ_TEMP_1;
             break;
     }
 

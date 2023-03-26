@@ -5,5 +5,7 @@
 #define TASK_WATCHDOG           0x0200
 #define TASK_DEBUG              0x0300
 #define TASK_I2C_SENSOR         0x0400
+#define TASK_I2C_READ           0x0500
+#define TASK_I2C_WRITE          0x0600
 
 #endif
