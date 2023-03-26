@@ -42,4 +42,6 @@
 
 #define VEML7700_ALS_POWER_SAVING_PSM_EN    0x0001
 
+int veml7700_setup(i2c_inst_t * i2c);
+
 #endif

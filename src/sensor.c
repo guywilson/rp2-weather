@@ -19,6 +19,7 @@
 #include "TMP117.h"
 #include "SHT4x.h"
 #include "icp10125.h"
+#include "veml7700.h"
 #include "nRF24L01.h"
 #include "utils.h"
 
@@ -26,11 +27,10 @@
 #define STATE_READ_TEMP_2           0x0101
 #define STATE_READ_HUMIDITY_1       0x0200
 #define STATE_READ_HUMIDITY_2       0x0201
-#define STATE_READ_HUMIDITY_3       0x0202
 #define STATE_READ_PRESSURE_1       0x0300
 #define STATE_READ_PRESSURE_2       0x0301
-#define STATE_READ_PRESSURE_3       0x0302
-#define STATE_READ_LUX              0x0400
+#define STATE_READ_LUX_1            0x0400
+#define STATE_READ_LUX_2            0x0401
 
 weather_packet_t            weather;
 static uint8_t              buffer[32];
@@ -38,7 +38,7 @@ static uint8_t              buffer[32];
 int initSensors(i2c_inst_t * i2c) {
     weather.chipID = * ((io_ro_32 *)(SYSINFO_BASE + SYSINFO_CHIP_ID_OFFSET));
 
-    return tmp117_setup(i2c) | sht4x_setup(i2c) | icp10125_setup(i2c);
+    return tmp117_setup(i2c) | sht4x_setup(i2c) | icp10125_setup(i2c) | veml7700_setup(i2c);
 }
 
 void taskI2CSensor(PTASKPARM p) {
@@ -136,11 +136,31 @@ void taskI2CSensor(PTASKPARM p) {
 
             delay = rtc_val_ms(1975);
 
-            state = STATE_READ_LUX;
+            state = STATE_READ_LUX_1;
             break;
 
-        case STATE_READ_LUX:
-            lgLogDebug("Rd L");
+        case STATE_READ_LUX_1:
+            lgLogDebug("Rd L1");
+            buffer[0] = VEML7700_REG_ALS;
+
+            i2cTriggerReadRegister(
+                            i2c0, 
+                            TASK_I2C_SENSOR, 
+                            rtc_val_ms(1), 
+                            VEML7700_ADDRESS, 
+                            buffer, 
+                            1, 
+                            buffer, 
+                            2, 
+                            true,
+                            false);
+
+            state = STATE_READ_LUX_2;
+            return;
+
+        case STATE_READ_LUX_2:
+            weather.rawLux = copyI2CReg_uint16(&buffer[0]);
+            
             memcpy(buffer, &weather, sizeof(weather_packet_t));
             nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
 
