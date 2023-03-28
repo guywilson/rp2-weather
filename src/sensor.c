@@ -132,8 +132,6 @@ void taskI2CSensor(PTASKPARM p) {
                             ((uint32_t)buffer[4] << 8) | 
                             (uint32_t)buffer[6]);
 
-            lgLogDebug("rawT:%d, rawP:%u", weather.rawICPTemperature, weather.rawICPPressure);
-
             delay = rtc_val_ms(1975);
 
             state = STATE_READ_LUX_1;
@@ -159,8 +157,12 @@ void taskI2CSensor(PTASKPARM p) {
             return;
 
         case STATE_READ_LUX_2:
-            weather.rawLux = copyI2CReg_uint16(&buffer[0]);
-            
+            /*
+            ** The veml7700 seems to have the opposite response structure
+            ** to other sensors, i.e. LSB then MSB...
+            */
+            weather.rawLux = ((uint16_t)((((uint16_t)buffer[1]) << 8) | (uint16_t)buffer[0]));
+
             memcpy(buffer, &weather, sizeof(weather_packet_t));
             nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
 
