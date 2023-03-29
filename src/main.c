@@ -16,6 +16,7 @@
 #include "rtc_rp2040.h"
 #include "serial_rp2040.h"
 #include "i2c_rp2040.h"
+#include "adc_rp2040.h"
 #include "heartbeat.h"
 #include "watchdog.h"
 #include "logger.h"
@@ -53,6 +54,8 @@ void setup(void) {
 		lgLogError("ERR: Sensor init");
 		exit(-1);
 	}
+
+    adcInit();
 
     otp = getOTPValues();
 

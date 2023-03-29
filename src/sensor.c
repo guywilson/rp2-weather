@@ -35,6 +35,10 @@
 weather_packet_t            weather;
 static uint8_t              buffer[32];
 
+weather_packet_t * getWeatherPacket() {
+    return &weather;
+}
+
 int initSensors(i2c_inst_t * i2c) {
     weather.chipID = * ((io_ro_32 *)(SYSINFO_BASE + SYSINFO_CHIP_ID_OFFSET));
 
