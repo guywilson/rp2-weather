@@ -62,10 +62,10 @@ int icp10125_setup(i2c_inst_t * i2c) {
         return -1;
     }
     
-    buffer[0] = 0xC7;
-    buffer[1] = 0xF7;
-
     for (i = 0; i < 4; i++) {
+        buffer[0] = 0xC7;
+        buffer[1] = 0xF7;
+
         i2c_write_blocking(i2c0, ICP10125_ADDRESS, buffer, 2, false);
         i2c_read_blocking(i2c0, ICP10125_ADDRESS, buffer, 3, false);
 

@@ -20,6 +20,7 @@
 #include "watchdog.h"
 #include "logger.h"
 #include "sensor.h"
+#include "icp10125.h"
 #include "nRF24L01.h"
 #include "utils.h"
 
@@ -29,6 +30,8 @@
 #define SPI0_CSEL_PIN				22
 
 void setup(void) {
+    uint16_t *          otp;
+
 	/*
 	** Disable the Watchdog, if we have restarted due to a
 	** watchdog reset, we want to enable it when we're ready...
@@ -44,12 +47,16 @@ void setup(void) {
     gpio_set_function(I2C_SDA_ALT_PIN, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SLK_ALT_PIN, GPIO_FUNC_I2C);
 
-    lgOpen(uart0, LOG_LEVEL_FATAL | LOG_LEVEL_ERROR);
+    lgOpen(uart0, LOG_LEVEL_FATAL | LOG_LEVEL_ERROR | LOG_LEVEL_STATUS);
 
 	if (initSensors(i2c0)) {
 		lgLogError("ERR: Sensor init");
 		exit(-1);
 	}
+
+    otp = getOTPValues();
+
+    lgLogStatus("OTP: 0x%04X, 0x%04X, 0x%04X, 0x%04X", otp[0], otp[1], otp[2], otp[3]);
 
 	spi_init(spi0, 5000000);
 
