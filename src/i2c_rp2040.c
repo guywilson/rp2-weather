@@ -60,6 +60,11 @@ void taskI2CWrite(PTASKPARM p) {
     switch (state) {
         case I2C_WRITE_STATE_BEGIN:
             lgLogDebug("I2CWr: begin");
+            /*
+            ** Let's just do the blocking write for now, there is a bug in
+            ** the state machine logic below that I haven't managed to identify
+            ** yet...
+            */
             i2cWriteBlocking(i2cWrite->i2c, i2cWrite->addr, i2cWrite->buffer, i2cWrite->len, i2cWrite->noStop);
             state = I2C_WRITE_STATE_CALLBACK;
             delay = rtc_val_ms(1);
