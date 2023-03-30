@@ -31,6 +31,7 @@
 #define STATE_READ_PRESSURE_2       0x0301
 #define STATE_READ_LUX_1            0x0400
 #define STATE_READ_LUX_2            0x0401
+#define STATE_SEND_PACKET           0x07FF
 
 weather_packet_t            weather;
 static uint8_t              buffer[32];
@@ -73,7 +74,7 @@ void taskI2CSensor(PTASKPARM p) {
             lgLogDebug("Rd T2");
             weather.rawTemperature = copyI2CReg_int16(buffer);
 
-            delay = rtc_val_ms(2000);
+            delay = rtc_val_ms(250);
 
             state = STATE_READ_HUMIDITY_1;
             break;
@@ -101,7 +102,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             weather.rawHumidity = copyI2CReg_uint16(&buffer[3]);
 
-            delay = rtc_val_ms(1990);
+            delay = rtc_val_ms(240);
 
             state = STATE_READ_PRESSURE_1;
             break;
@@ -136,7 +137,7 @@ void taskI2CSensor(PTASKPARM p) {
                             ((uint32_t)buffer[4] << 8) | 
                             (uint32_t)buffer[6]);
 
-            delay = rtc_val_ms(1975);
+            delay = rtc_val_ms(225);
 
             state = STATE_READ_LUX_1;
             break;
@@ -167,10 +168,16 @@ void taskI2CSensor(PTASKPARM p) {
             */
             weather.rawLux = ((uint16_t)((((uint16_t)buffer[1]) << 8) | (uint16_t)buffer[0]));
 
+            delay = rtc_val_sec(19);
+
+            state = STATE_SEND_PACKET;
+            break;
+
+        case STATE_SEND_PACKET:
             memcpy(buffer, &weather, sizeof(weather_packet_t));
             nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
 
-            delay = rtc_val_ms(4000);
+            delay = rtc_val_ms(250);
 
             state = STATE_READ_TEMP_1;
             break;
