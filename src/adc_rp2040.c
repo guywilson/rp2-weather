@@ -2,40 +2,51 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "hardware/adc.h"
 #include "adc_rp2040.h"
+#include "rtc_rp2040.h"
+#include "scheduler.h"
+#include "taskdef.h"
 #include "sensor.h"
 
-void adcIRQ() {
-    int                 i;
-    int                 channel;
-    weather_packet_t *  weather;
+adc_samples_t           adcSamples;
 
-    weather = getWeatherPacket();
+void adcIRQ() {
+    static int          numSamples = 0;
+    int                 channel;
+
+    if (numSamples == 0) {
+        /*
+        ** Clear the structure...
+        */
+        memset(&adcSamples, 0, sizeof(adc_samples_t));
+    }
 
     channel = adc_get_selected_input();
 
-    while (i < 4) {
+    while (!adc_fifo_is_empty()) {
         switch (channel) {
-            case ADC_INPUT_WIND_DIR:
-                weather->rawWindDir = adc_fifo_get();
+            case ADC_CHANNEL_WIND_DIR:
+                adcSamples.adcWindDir += adc_fifo_get();
                 break;
 
-            case ADC_INPUT_BATTERY_VOLTAGE:
-                weather->rawBatteryVolts = adc_fifo_get();
+            case ADC_CHANNEL_BATTERY_VOLTAGE:
+                adcSamples.adcBatteryVoltage += adc_fifo_get();
                 break;
 
-            case ADC_INPUT_BATTERY_TEMPERATURE:
-                weather->rawBatteryTemperature = adc_fifo_get();
+            case ADC_CHANNEL_BATTERY_TEMPERATURE:
+                adcSamples.adcBatteryTemperature += adc_fifo_get();
+
+                // Deliberately fall through...
+
+            case ADC_CHANNEL_NOT_CONNECTED:
                 channel++;
                 break;
 
-            case ADC_INPUT_NOT_CONNECTED:
-                break;
-
-            case ADC_INPUT_INTERNAL_TEMPERATURE:
-                weather->rawChipTemperature = adc_fifo_get();
+            case ADC_CHANNEL_INTERNAL_TEMPERATURE:
+                adcSamples.adcRP2040Temperature += adc_fifo_get();
                 break;
         }
 
@@ -44,9 +55,36 @@ void adcIRQ() {
         if (channel == 5) {
             channel = 0;
         }
-
-        i++;
     }
+
+    numSamples++;
+
+    if (numSamples == 16) {
+        numSamples = 0;
+
+        /*
+        ** Average of the last 16 samples...
+        */
+        adcSamples.adcWindDir = (adcSamples.adcWindDir >> 4);
+        adcSamples.adcBatteryVoltage = (adcSamples.adcBatteryVoltage >> 4);
+        adcSamples.adcBatteryTemperature = (adcSamples.adcBatteryTemperature >> 4);
+        adcSamples.adcRP2040Temperature = (adcSamples.adcRP2040Temperature >> 4);
+
+        scheduleTaskOnce(TASK_ADC, rtc_val_ms(1), &adcSamples);
+    }
+}
+
+void taskADC(PTASKPARM p) {
+    weather_packet_t *          pWeather;
+    adc_samples_t *             pSamples;
+    
+    pWeather = getWeatherPacket();
+    pSamples = (adc_samples_t *)p;
+
+    pWeather->rawWindDir = pSamples->adcWindDir;
+    pWeather->rawBatteryVolts = pSamples->adcBatteryVoltage;
+    pWeather->rawBatteryTemperature = pSamples->adcBatteryTemperature;
+    pWeather->rawChipTemperature = pSamples->adcRP2040Temperature;
 }
 
 void adcInit() {
@@ -59,14 +97,14 @@ void adcInit() {
     /*
     ** On-chip temperature sensor...
     */
-    adc_select_input(ADC_INPUT_INTERNAL_TEMPERATURE);
+    adc_select_input(ADC_CHANNEL_INTERNAL_TEMPERATURE);
 
     adc_set_temp_sensor_enabled(true);
 
     /*
-    ** 1000 samples/sec
+    ** 750 samples/sec
     */
-    adc_set_clkdiv(47999.0f);
+    adc_set_clkdiv(63999.0f);
     
     adc_set_round_robin(0x17);
 
