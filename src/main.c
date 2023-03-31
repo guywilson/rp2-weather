@@ -75,13 +75,12 @@ int main(void) {
 		turnOff(LED_ONBOARD);
 	}
 
-	initScheduler(6);
+	initScheduler(5);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &WatchdogTask);
 	registerTask(TASK_I2C_SENSOR, &taskI2CSensor);
     registerTask(TASK_I2C_READ, &taskI2CRead);
-    registerTask(TASK_I2C_WRITE, &taskI2CWrite);
     registerTask(TASK_ADC, &taskADC);
 
 	scheduleTaskOnce(
