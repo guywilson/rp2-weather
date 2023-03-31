@@ -58,6 +58,22 @@ i2c_read_write_t;
 
 static i2c_read_write_t         i2cReadWrite;
 
+int getTxEmptyIntCount() {
+    return (int)i2cReadWrite.count_TX_EMPTY;
+}
+
+int getTxAbrtIntCount() {
+    return (int)i2cReadWrite.count_TX_ABRT;
+}
+
+int getRxFullIntCount() {
+    return (int)i2cReadWrite.count_RX_FULL;
+}
+
+int getStopDetIntCount() {
+    return (int)i2cReadWrite.count_STOP_DET;
+}
+
 void irqI2CTxAbortHandler(i2c_read_write_t * i2c_rw) {
     uint32_t            abrtReason;
 

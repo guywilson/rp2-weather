@@ -8,6 +8,11 @@
 
 #define I2C_SDA_HOLD                38
 
+int getTxEmptyIntCount();
+int getTxAbrtIntCount();
+int getRxFullIntCount();
+int getStopDetIntCount();
+
 void taskI2CRead(PTASKPARM p);
 
 uint32_t i2cInit(i2c_inst_t *i2c, uint32_t baudrate);
