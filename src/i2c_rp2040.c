@@ -15,6 +15,10 @@
 #include "rtc_rp2040.h"
 #include "i2c_rp2040.h"
 
+#define I2C_OK                                  0x0000
+#define I2C_ERROR_DEVICE_NOT_CONNECTED          0x0100
+#define I2C_ERROR_GENERIC                       0x0200
+
 #define I2C_READ_STATE_BEGIN                    0x0010
 #define I2C_READ_STATE_WRITE_CMD                0x0020
 #define I2C_READ_STATE_READ_BYTE                0x0040
@@ -32,17 +36,104 @@ typedef struct {
 
     uint16_t            callbackTask;
 
-    uint8_t             addr;
+    uint16_t            errorCode;
+
+    int                 ix;
     size_t              len;
     uint8_t *           buffer;
+
+    uint8_t             addr;
     bool                noStop;
 
     rtc_t               readDelay;
 }
 i2c_read_write_t;
 
+static i2c_read_write_t         i2cReadWrite;
 static i2c_read_write_t         i2cRdStruct;
 static i2c_read_write_t         i2cWrStruct;
+
+void irqI2CTxAbortHandler(i2c_read_write_t * i2c_rw) {
+    uint32_t            abrtReason;
+
+    abrtReason = i2c_rw->i2c->hw->tx_abrt_source;
+
+    if (abrtReason & I2C_IC_TX_ABRT_SOURCE_ABRT_7B_ADDR_NOACK_BITS) {
+        i2c_rw->errorCode = I2C_ERROR_DEVICE_NOT_CONNECTED;
+    }
+    else if (abrtReason & I2C_IC_TX_ABRT_SOURCE_BITS) {
+        i2c_rw->errorCode = I2C_ERROR_GENERIC;
+    }
+    else {
+        i2c_rw->errorCode = I2C_OK;
+    }
+}
+
+void irqI2CTxEmptyHandler(i2c_read_write_t * i2c_rw) {
+    bool            isLast = false;
+    bool            isFirst = false;
+    uint8_t         b;
+
+    isFirst = (i2c_rw->ix == 0);
+    isLast = (i2c_rw->ix == i2c_rw->len - 1);
+
+    if (i2c_rw->ix < i2c_rw->len) {
+        b = i2c_rw->buffer[i2c_rw->ix++];
+
+        i2c_rw->i2c->hw->data_cmd =
+                bool_to_bit(isFirst && i2c_rw->i2c->restart_on_next) << I2C_IC_DATA_CMD_RESTART_LSB |
+                bool_to_bit(isLast && !i2c_rw->noStop) << I2C_IC_DATA_CMD_STOP_LSB |
+                b;
+    }
+    else {
+        i2c_rw->i2c->hw->intr_mask &= ~(I2C_IC_INTR_MASK_M_TX_EMPTY_BITS & 0x00001FFF);
+    }
+}
+
+void irqI2CStopDetectHandler(i2c_read_write_t * i2c_rw) {
+    i2c_rw->i2c->hw->clr_stop_det;
+}
+
+void irqI2CRxFullHandler(i2c_read_write_t * i2c_rw) {
+    bool            isLast = false;
+    bool            isFirst = false;
+
+    isFirst = (i2c_rw->ix == 0);
+    isLast = (i2c_rw->ix == i2c_rw->len - 1);
+
+    i2c_rw->buffer[i2c_rw->ix++] = (uint8_t)(i2c_rw->i2c->hw->data_cmd & 0x000000FF);
+
+    if (!isLast) {
+        i2c_rw->i2c->hw->data_cmd =
+                bool_to_bit(isFirst && i2c_rw->i2c->restart_on_next) << I2C_IC_DATA_CMD_RESTART_LSB |
+                bool_to_bit(isLast && !i2c_rw->noStop) << I2C_IC_DATA_CMD_STOP_LSB |
+                I2C_IC_DATA_CMD_CMD_BITS; // -> 1 for read
+    }
+}
+
+void irqI2CHandler() {
+    uint32_t            intrStat;
+
+    intrStat = i2cReadWrite.i2c->hw->raw_intr_stat;
+
+    switch (intrStat & I2C_IC_RAW_INTR_STAT_BITS) {
+        case I2C_IC_RAW_INTR_STAT_STOP_DET_BITS:
+            irqI2CStopDetectHandler(&i2cReadWrite);
+            break;
+
+        case I2C_IC_RAW_INTR_STAT_TX_EMPTY_BITS:
+            irqI2CTxEmptyHandler(&i2cReadWrite);
+            break;
+
+        case I2C_IC_RAW_INTR_STAT_TX_ABRT_BITS:
+            irqI2CTxAbortHandler(&i2cReadWrite);
+            break;
+
+        case I2C_IC_RAW_INTR_STAT_RX_FULL_BITS:
+            irqI2CRxFullHandler(&i2cReadWrite);
+            break;
+    }
+}
 
 void taskI2CWrite(PTASKPARM p) {
     static int              state = I2C_WRITE_STATE_BEGIN;
@@ -321,6 +412,17 @@ uint32_t i2cInit(i2c_inst_t *i2c, uint32_t baudrate) {
 
     // Always enable the DREQ signalling -- harmless if DMA isn't listening
     i2c->hw->dma_cr = I2C_IC_DMA_CR_TDMAE_BITS | I2C_IC_DMA_CR_RDMAE_BITS;
+
+    memset(&i2cReadWrite, 0, sizeof(i2c_read_write_t));
+
+    i2c->hw->intr_mask = 
+        I2C_IC_INTR_MASK_M_TX_ABRT_BITS | 
+        I2C_IC_INTR_MASK_M_TX_EMPTY_BITS | 
+        I2C_IC_INTR_MASK_M_STOP_DET_BITS | 
+        I2C_IC_INTR_MASK_M_RX_FULL_BITS;
+
+    irq_set_exclusive_handler(I2C0_IRQ, irqI2CHandler);
+    irq_set_enabled(I2C0_IRQ, true);
 
     // Re-sets i2c->hw->enable upon returning:
     return i2c_set_baudrate(i2c, baudrate);

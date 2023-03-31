@@ -94,12 +94,12 @@ void adcInit() {
     adc_gpio_init(27);
     adc_gpio_init(28);
 
+    adc_set_temp_sensor_enabled(true);
+
     /*
     ** On-chip temperature sensor...
     */
     adc_select_input(ADC_CHANNEL_INTERNAL_TEMPERATURE);
-
-    adc_set_temp_sensor_enabled(true);
 
     /*
     ** 750 samples/sec
@@ -114,6 +114,7 @@ void adcInit() {
     adc_irq_set_enabled(true);
 
     irq_set_exclusive_handler(ADC_IRQ_FIFO, adcIRQ);
+    irq_set_enabled(ADC_IRQ_FIFO, true);
 
     adc_run(true);
 }
