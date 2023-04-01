@@ -49,17 +49,18 @@ int initSensors(i2c_inst_t * i2c) {
 void taskI2CSensor(PTASKPARM p) {
     static int          state = STATE_READ_TEMP_1;
     rtc_t               delay = rtc_val_ms(4000);
+    uint8_t             reg;
 
     switch (state) {
         case STATE_READ_TEMP_1:
             lgLogDebug("Rd T1");
-            buffer[0] = TMP117_REG_TEMP;
+            reg = TMP117_REG_TEMP;
             i2cTriggerReadRegister(
                             i2c0, 
                             TASK_I2C_SENSOR, 
                             rtc_val_ms(5), 
                             TMP117_ADDRESS, 
-                            buffer, 
+                            &reg, 
                             1, 
                             buffer, 
                             2, 
@@ -73,13 +74,6 @@ void taskI2CSensor(PTASKPARM p) {
             lgLogDebug("Rd T2");
             weather.rawTemperature = copyI2CReg_int16(buffer);
 
-            lgLogInfo(
-                "TX_EMPTY(%d), TX_ABRT(%d), RX_FULL(%d), STOP_DET(%d)", 
-                getTxEmptyIntCount(), 
-                getTxAbrtIntCount(), 
-                getRxFullIntCount(), 
-                getStopDetIntCount());
-
             delay = rtc_val_ms(250);
 
             state = STATE_READ_HUMIDITY_1;
@@ -87,13 +81,13 @@ void taskI2CSensor(PTASKPARM p) {
 
         case STATE_READ_HUMIDITY_1:
             lgLogDebug("Rd H1");
-            buffer[0] = SHT4X_CMD_MEASURE_HI_PRN;
+            reg = SHT4X_CMD_MEASURE_HI_PRN;
             i2cTriggerReadRegister(
                             i2c0, 
                             TASK_I2C_SENSOR, 
                             rtc_val_ms(10), 
                             SHT4X_ADDRESS, 
-                            buffer, 
+                            &reg, 
                             1, 
                             buffer, 
                             6, 
@@ -107,13 +101,6 @@ void taskI2CSensor(PTASKPARM p) {
             lgLogDebug("Rd H2");
 
             weather.rawHumidity = copyI2CReg_uint16(&buffer[3]);
-
-            lgLogInfo(
-                "TX_EMPTY(%d), TX_ABRT(%d), RX_FULL(%d), STOP_DET(%d)", 
-                getTxEmptyIntCount(), 
-                getTxAbrtIntCount(), 
-                getRxFullIntCount(), 
-                getStopDetIntCount());
 
             delay = rtc_val_ms(240);
 
@@ -150,13 +137,6 @@ void taskI2CSensor(PTASKPARM p) {
                             ((uint32_t)buffer[4] << 8) | 
                             (uint32_t)buffer[6]);
 
-            lgLogInfo(
-                "TX_EMPTY(%d), TX_ABRT(%d), RX_FULL(%d), STOP_DET(%d)", 
-                getTxEmptyIntCount(), 
-                getTxAbrtIntCount(), 
-                getRxFullIntCount(), 
-                getStopDetIntCount());
-
             delay = rtc_val_ms(225);
 
             state = STATE_READ_LUX_1;
@@ -187,13 +167,6 @@ void taskI2CSensor(PTASKPARM p) {
             ** to other sensors, i.e. LSB then MSB...
             */
             weather.rawLux = ((uint16_t)((((uint16_t)buffer[1]) << 8) | (uint16_t)buffer[0]));
-
-            lgLogInfo(
-                "TX_EMPTY(%d), TX_ABRT(%d), RX_FULL(%d), STOP_DET(%d)", 
-                getTxEmptyIntCount(), 
-                getTxAbrtIntCount(), 
-                getRxFullIntCount(), 
-                getStopDetIntCount());
 
             delay = rtc_val_sec(19);
 

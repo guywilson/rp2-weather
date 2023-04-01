@@ -8,16 +8,12 @@
 
 #define I2C_SDA_HOLD                38
 
-int getTxEmptyIntCount();
-int getTxAbrtIntCount();
-int getRxFullIntCount();
-int getStopDetIntCount();
-
+void taskI2CWrite(PTASKPARM p);
 void taskI2CRead(PTASKPARM p);
 
 uint32_t i2cInit(i2c_inst_t *i2c, uint32_t baudrate);
 
-void i2cTriggerReadRegister(
+int i2cTriggerReadRegister(
                 i2c_inst_t * i2c, 
                 uint16_t callbackTask, 
                 rtc_t writeReadDelay, 
@@ -28,14 +24,14 @@ void i2cTriggerReadRegister(
                 size_t dstLen, 
                 bool nostopWrite,
                 bool nostopRead);
-void i2cTriggerRead(
+int i2cTriggerRead(
             i2c_inst_t * i2c, 
             uint16_t callbackTask, 
             uint8_t addr, 
             uint8_t * dst, 
             size_t len, 
             bool nostop);
-void i2cTriggerWrite(
+int i2cTriggerWrite(
             i2c_inst_t * i2c, 
             uint16_t callbackTask, 
             uint8_t addr, 

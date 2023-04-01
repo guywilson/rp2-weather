@@ -15,10 +15,6 @@
 #include "rtc_rp2040.h"
 #include "i2c_rp2040.h"
 
-#define I2C_OK                                  0x0000
-#define I2C_ERROR_DEVICE_NOT_CONNECTED          0x0100
-#define I2C_ERROR_GENERIC                       0x0200
-
 #define I2C_READ_STATE_BEGIN                    0x0010
 #define I2C_READ_STATE_WRITE_CMD                0x0020
 #define I2C_READ_STATE_READ_BYTE                0x0040
@@ -34,156 +30,224 @@
 typedef struct {
     i2c_inst_t *        i2c;
 
-    uint16_t            txCallbackTask;
-    uint16_t            rxCallbackTask;
-
-    uint16_t            errorCode;
-    uint16_t            count_TX_EMPTY;
-    uint16_t            count_RX_FULL;
-    uint16_t            count_TX_ABRT;
-    uint16_t            count_STOP_DET;
-
-    int                 ix;
-    int                 txLen;
-    int                 rxLen;
-    uint8_t *           buffer;
+    uint16_t            callbackTask;
 
     uint8_t             addr;
-    bool                txNoStop;
-    bool                rxNoStop;
+    size_t              len;
+    uint8_t *           buffer;
+    bool                noStop;
 
     rtc_t               readDelay;
 }
 i2c_read_write_t;
 
-static i2c_read_write_t         i2cReadWrite;
+static i2c_read_write_t         i2cRdStruct;
+static i2c_read_write_t         i2cWrStruct;
 
-int getTxEmptyIntCount() {
-    return (int)i2cReadWrite.count_TX_EMPTY;
-}
+void taskI2CWrite(PTASKPARM p) {
+    static int              state = I2C_WRITE_STATE_BEGIN;
+    static int              ix = 0;
+    static bool             abort = false;
+    rtc_t                   delay;
+    bool                    isFirst = false;
+    bool                    isLast = false;
+    uint32_t                abort_reason;
+    uint8_t                 b;
+    i2c_read_write_t *      i2cWrite;
 
-int getTxAbrtIntCount() {
-    return (int)i2cReadWrite.count_TX_ABRT;
-}
+    i2cWrite = (i2c_read_write_t *)p;
 
-int getRxFullIntCount() {
-    return (int)i2cReadWrite.count_RX_FULL;
-}
-
-int getStopDetIntCount() {
-    return (int)i2cReadWrite.count_STOP_DET;
-}
-
-void irqI2CTxAbortHandler(i2c_read_write_t * i2c_rw) {
-    uint32_t            abrtReason;
-
-    abrtReason = i2c_rw->i2c->hw->tx_abrt_source;
-
-    if (abrtReason & I2C_IC_TX_ABRT_SOURCE_ABRT_7B_ADDR_NOACK_BITS) {
-        i2c_rw->errorCode = I2C_ERROR_DEVICE_NOT_CONNECTED;
-    }
-    else if (abrtReason & I2C_IC_TX_ABRT_SOURCE_BITS) {
-        i2c_rw->errorCode = I2C_ERROR_GENERIC;
-    }
-    else {
-        i2c_rw->errorCode = I2C_OK;
-    }
-}
-
-void irqI2CTxEmptyHandler(i2c_read_write_t * i2c_rw) {
-    bool            isFirst = false;
-    bool            isLast = false;
-
-    isFirst = (i2c_rw->ix == 0);
-    isLast = (i2c_rw->ix == i2c_rw->txLen - 1);
-
-    if (i2c_rw->ix < i2c_rw->txLen) {
-        i2c_rw->i2c->hw->data_cmd =
-                bool_to_bit(isFirst && i2c_rw->i2c->restart_on_next) << I2C_IC_DATA_CMD_RESTART_LSB |
-                bool_to_bit(isLast && !i2c_rw->txNoStop) << I2C_IC_DATA_CMD_STOP_LSB |
-                i2c_rw->buffer[i2c_rw->ix++];
-    }
-    else {
-        i2c_rw->i2c->restart_on_next = i2c_rw->txNoStop;
-        i2c_rw->i2c->hw->intr_mask &= ~(I2C_IC_INTR_MASK_M_TX_EMPTY_BITS & 0x00001FFF);
-
-        scheduleTaskOnce(i2c_rw->txCallbackTask, i2c_rw->readDelay, NULL);
-    }
-}
-
-void irqI2CStopDetectHandler(i2c_read_write_t * i2c_rw) {
-    i2c_rw->i2c->hw->clr_stop_det;
-}
-
-void irqI2CRxFullHandler(i2c_read_write_t * i2c_rw) {
-    bool            isLast = false;
-    bool            isFirst = false;
-
-    isFirst = (i2c_rw->ix == 0);
-    isLast = (i2c_rw->ix == i2c_rw->rxLen - 1);
-
-    i2c_rw->buffer[i2c_rw->ix++] = (uint8_t)(i2c_rw->i2c->hw->data_cmd & 0x000000FF);
-
-    if (!isLast) {
-        i2c_rw->i2c->hw->data_cmd =
-                bool_to_bit(isFirst && i2c_rw->i2c->restart_on_next) << I2C_IC_DATA_CMD_RESTART_LSB |
-                bool_to_bit(isLast && !i2c_rw->rxNoStop) << I2C_IC_DATA_CMD_STOP_LSB |
-                I2C_IC_DATA_CMD_CMD_BITS; // -> 1 for read
-    }
-    else {
-        i2c_rw->i2c->restart_on_next = i2c_rw->rxNoStop;
-        i2c_rw->i2c->hw->intr_mask &= ~(I2C_IC_INTR_MASK_M_RX_FULL_BITS & 0x00001FFF);
-
-        scheduleTaskOnce(i2c_rw->rxCallbackTask, rtc_val_ms(2), NULL);
-    }
-}
-
-void irqI2CHandler() {
-    uint32_t            intrStat;
-
-    intrStat = i2cReadWrite.i2c->hw->raw_intr_stat;
-
-    switch (intrStat & I2C_IC_RAW_INTR_STAT_BITS) {
-        case I2C_IC_RAW_INTR_STAT_STOP_DET_BITS:
-            irqI2CStopDetectHandler(&i2cReadWrite);
-            i2cReadWrite.count_STOP_DET++;
+    switch (state) {
+        case I2C_WRITE_STATE_BEGIN:
+            lgLogDebug("I2CWr: begin");
+            /*
+            ** Let's just do the blocking write for now, there is a bug in
+            ** the state machine logic below that I haven't managed to identify
+            ** yet...
+            */
+            i2cWriteBlocking(i2cWrite->i2c, i2cWrite->addr, i2cWrite->buffer, i2cWrite->len, i2cWrite->noStop);
+            state = I2C_WRITE_STATE_CALLBACK;
+            delay = rtc_val_ms(1);
             break;
+            // i2cWrite->i2c->hw->enable = 0;
+            // i2cWrite->i2c->hw->tar = i2cWrite->addr;
+            // i2cWrite->i2c->hw->enable = 1;
 
-        case I2C_IC_RAW_INTR_STAT_TX_EMPTY_BITS:
-            irqI2CTxEmptyHandler(&i2cReadWrite);
-            i2cReadWrite.count_TX_EMPTY++;
-            break;
+            // Deliberately fall through...
 
-        case I2C_IC_RAW_INTR_STAT_TX_ABRT_BITS:
-            irqI2CTxAbortHandler(&i2cReadWrite);
-            i2cReadWrite.count_TX_ABRT++;
-            break;
+        case I2C_WRITE_STATE_TX_BYTE:
+            lgLogDebug("I2CWr: tx");
+            isFirst = (ix == 0);
+            isLast = (ix == (i2cWrite->len - 1));
 
-        case I2C_IC_RAW_INTR_STAT_RX_FULL_BITS:
-            irqI2CRxFullHandler(&i2cReadWrite);
-            i2cReadWrite.count_RX_FULL++;
-            break;
+            b = i2cWrite->buffer[ix++];
+
+            i2cWrite->i2c->hw->data_cmd =
+                    bool_to_bit(isFirst && i2cWrite->i2c->restart_on_next) << I2C_IC_DATA_CMD_RESTART_LSB |
+                    bool_to_bit(isLast && !i2cWrite->noStop) << I2C_IC_DATA_CMD_STOP_LSB |
+                    b;
+
+            // Deliberately fall through...
+
+        case I2C_WRITE_STATE_TX_WAIT:
+            lgLogDebug("I2CWr: txw");
+            if (i2cWrite->i2c->hw->txflr) {
+                state = I2C_WRITE_STATE_TX_WAIT;
+                delay = rtc_val_ms(1);
+                break;
+            }
+
+            isFirst = (ix == 0);
+            isLast = (ix == (i2cWrite->len - 1));
+
+            abort_reason = i2cWrite->i2c->hw->tx_abrt_source;
+
+            if (abort_reason) {
+                // Note clearing the abort flag also clears the reason, and
+                // this instance of flag is clear-on-read! Note also the
+                // IC_CLR_TX_ABRT register always reads as 0.
+                i2cWrite->i2c->hw->clr_tx_abrt;
+                abort = true;
+            }
+
+            // Deliberately fall through...
+
+        case I2C_WRITE_STATE_TX_CHECK:
+            lgLogDebug("I2CWr: txc");
+            isLast = (ix == (i2cWrite->len - 1));
+
+            if ((abort || (isLast && !i2cWrite->noStop))) {
+                if (!(i2cWrite->i2c->hw->raw_intr_stat & I2C_IC_RAW_INTR_STAT_STOP_DET_BITS)) {
+                    state = I2C_WRITE_STATE_TX_CHECK;
+                    delay = rtc_val_ms(1);
+                    break;
+                }
+            }
+
+            // Deliberately fall through...
+
+        case I2C_WRITE_STATE_TX_FINALISE:
+            lgLogDebug("I2CWr: txf");
+
+            isLast = (ix == (i2cWrite->len - 1));
+
+            if (abort || (isLast && !i2cWrite->noStop)) {
+                i2cWrite->i2c->hw->clr_stop_det;
+            }
+
+            // Note the hardware issues a STOP automatically on an abort condition.
+            // Note also the hardware clears RX FIFO as well as TX on abort,
+            // because we set hwparam IC_AVOID_RX_FIFO_FLUSH_ON_TX_ABRT to 0.
+            if (!abort && !isLast) {
+                state = I2C_WRITE_STATE_TX_BYTE;
+                delay = rtc_val_ms(1);
+                break;
+            }
+
+            i2cWrite->i2c->restart_on_next = i2cWrite->noStop;
+
+            // Deliberately fall through...
+
+        case I2C_WRITE_STATE_CALLBACK:
+            lgLogDebug("I2CWr: cb");
+            state = I2C_WRITE_STATE_BEGIN;
+            abort = false;
+            ix = 0;
+
+            scheduleTaskOnce(i2cWrite->callbackTask, i2cWrite->readDelay, &i2cRdStruct);
+            return;
     }
+
+    scheduleTaskOnce(TASK_I2C_WRITE, delay, p);
 }
 
 void taskI2CRead(PTASKPARM p) {
+    static int              state = I2C_READ_STATE_BEGIN;
+    static int              ix = 0;
+    rtc_t                   delay;
     bool                    isFirst = false;
     bool                    isLast = false;
-    i2c_read_write_t *      i2c_rw;
+    bool                    abort = false;
+    uint32_t                abort_reason;
+    uint8_t                 b;
+    i2c_read_write_t *      i2cRead;
 
-    i2c_rw = (i2c_read_write_t *)p;
+    i2cRead = (i2c_read_write_t *)p;
 
-    if (!i2c_get_write_available(i2c_rw->i2c)) {
-        scheduleTaskOnce(TASK_I2C_READ, rtc_val_ms(1), p);
+    switch (state) {
+        case I2C_READ_STATE_BEGIN:
+            i2cRead->i2c->hw->enable = 0;
+            i2cRead->i2c->hw->tar = i2cRead->addr;
+            i2cRead->i2c->hw->enable = 1;
+
+            // Deliberately fall through...
+
+        case I2C_READ_STATE_WRITE_CMD:
+            if (!i2c_get_write_available(i2cRead->i2c)) {
+                delay = rtc_val_ms(1);
+                break;
+            }
+
+            isFirst = (ix == 0);
+            isLast = (ix == (i2cRead->len - 1));
+
+            i2cRead->i2c->hw->data_cmd =
+                    bool_to_bit(isFirst && i2cRead->i2c->restart_on_next) << I2C_IC_DATA_CMD_RESTART_LSB |
+                    bool_to_bit(isLast && !i2cRead->noStop) << I2C_IC_DATA_CMD_STOP_LSB |
+                    I2C_IC_DATA_CMD_CMD_BITS; // -> 1 for read
+
+            // Deliberately fall through...
+
+        case I2C_READ_STATE_READ_BYTE:
+            abort_reason = i2cRead->i2c->hw->tx_abrt_source;
+            abort = (bool) i2cRead->i2c->hw->clr_tx_abrt;
+
+            if (!abort && !i2c_get_read_available(i2cRead->i2c)) {
+                state = I2C_READ_STATE_READ_BYTE;
+                delay = rtc_val_ms(1);
+                break;
+            }
+            else {
+                if (abort) {
+                    if (!abort_reason || abort_reason & I2C_IC_TX_ABRT_SOURCE_ABRT_7B_ADDR_NOACK_BITS) {
+                        lgLogError("I2CRdTask: Abort reason 0x%04X", abort_reason);
+                    }
+                    else {
+                        lgLogFatal("I2CRdTask: Panic - abort reason 0x%04X", abort_reason);
+                        return;
+                    }                
+                }
+                else {
+                    b = (uint8_t)i2cRead->i2c->hw->data_cmd;
+                    i2cRead->buffer[ix++] = b;
+
+                    lgLogDebug("Read: 0x%02X", b);
+
+                    /*
+                    ** Head back above until we're done, then fall through
+                    ** to callback...
+                    */
+                    if (ix < i2cRead->len) {
+                        state = I2C_READ_STATE_WRITE_CMD;
+                        delay = rtc_val_ms(1);
+                        
+                        i2cRead->i2c->restart_on_next = i2cRead->noStop;
+                        break;
+                    }
+                }
+            }
+
+            i2cRead->i2c->restart_on_next = i2cRead->noStop;
+
+        case I2C_READ_STATE_CALLBACK:
+            state = I2C_READ_STATE_BEGIN;
+            ix = 0;
+
+            scheduleTaskOnce(i2cRead->callbackTask, rtc_val_ms(5), NULL);
+            return;
     }
 
-    isFirst = (i2c_rw->ix == 0);
-    isLast = (i2c_rw->ix == (i2c_rw->rxLen - 1));
-
-    i2c_rw->i2c->hw->data_cmd =
-            bool_to_bit(isFirst && i2c_rw->i2c->restart_on_next) << I2C_IC_DATA_CMD_RESTART_LSB |
-            bool_to_bit(isLast && !i2c_rw->rxNoStop) << I2C_IC_DATA_CMD_STOP_LSB |
-            I2C_IC_DATA_CMD_CMD_BITS; // -> 1 for read
+    scheduleTaskOnce(TASK_I2C_READ, delay, p);
 }
 
 static uint32_t i2cSetBaudrate(i2c_inst_t *i2c, uint32_t baudrate) {
@@ -258,82 +322,37 @@ uint32_t i2cInit(i2c_inst_t *i2c, uint32_t baudrate) {
     // Always enable the DREQ signalling -- harmless if DMA isn't listening
     i2c->hw->dma_cr = I2C_IC_DMA_CR_TDMAE_BITS | I2C_IC_DMA_CR_RDMAE_BITS;
 
-    memset(&i2cReadWrite, 0, sizeof(i2c_read_write_t));
-
-    irq_set_exclusive_handler(I2C0_IRQ, irqI2CHandler);
-
     // Re-sets i2c->hw->enable upon returning:
     return i2c_set_baudrate(i2c, baudrate);
 }
 
-void i2cTriggerRead(i2c_inst_t * i2c, uint16_t callbackTask, uint8_t addr, uint8_t * dst, size_t len, bool nostop) {
-    i2cReadWrite.addr = addr;
-    i2cReadWrite.buffer = dst;
-    i2cReadWrite.rxLen = len;
-    i2cReadWrite.ix = 0;
-    i2cReadWrite.rxNoStop = nostop;
+int i2cTriggerRead(i2c_inst_t * i2c, uint16_t callbackTask, uint8_t addr, uint8_t * dst, size_t len, bool nostop) {
+    i2cRdStruct.callbackTask = callbackTask;
+    i2cRdStruct.addr = addr;
+    i2cRdStruct.buffer = dst;
+    i2cRdStruct.i2c = i2c;
+    i2cRdStruct.len = len;
+    i2cRdStruct.noStop = nostop;
 
-    i2cReadWrite.i2c = i2c;
-    i2cReadWrite.rxCallbackTask = callbackTask;
-
-    i2cReadWrite.i2c->hw->enable = 0;
-    i2cReadWrite.i2c->hw->tar = i2cReadWrite.addr;
-    i2cReadWrite.i2c->hw->enable = 1;
-
-    i2cReadWrite.count_RX_FULL = 0;
-    i2cReadWrite.count_STOP_DET = 0;
-    i2cReadWrite.count_TX_ABRT = 0;
-    i2cReadWrite.count_TX_EMPTY = 0;
-
-    i2c->hw->intr_mask = 
-        I2C_IC_INTR_MASK_M_TX_ABRT_BITS | 
-        I2C_IC_INTR_MASK_M_RX_FULL_BITS | 
-        I2C_IC_INTR_MASK_M_STOP_DET_BITS;
-
-    irq_set_enabled(I2C0_IRQ, true);
-
-    scheduleTaskOnce(TASK_I2C_READ, rtc_val_ms(2), &i2cReadWrite);
+    scheduleTaskOnce(TASK_I2C_READ, rtc_val_ms(2), &i2cRdStruct);
+    
+    return 0;
 }
 
-void i2cTriggerWrite(i2c_inst_t * i2c, uint16_t callbackTask, uint8_t addr, uint8_t * src, size_t len, bool nostop) {
-    bool        isFirst;
-    bool        isLast;
+int i2cTriggerWrite(i2c_inst_t * i2c, uint16_t callbackTask, uint8_t addr, uint8_t * src, size_t len, bool nostop) {
+    i2cWrStruct.callbackTask = callbackTask;
+    i2cWrStruct.addr = addr;
+    i2cWrStruct.buffer = src;
+    i2cWrStruct.i2c = i2c;
+    i2cWrStruct.len = len;
+    i2cWrStruct.noStop = nostop;
 
-    i2cReadWrite.addr = addr;
-    i2cReadWrite.buffer = src;
-    i2cReadWrite.txLen = len;
-    i2cReadWrite.ix = 0;
-    i2cReadWrite.txNoStop = nostop;
-
-    i2cReadWrite.i2c = i2c;
-    i2cReadWrite.txCallbackTask = callbackTask;
-
-    i2cReadWrite.i2c->hw->enable = 0;
-    i2cReadWrite.i2c->hw->tar = i2cReadWrite.addr;
-    i2cReadWrite.i2c->hw->enable = 1;
-
-    i2cReadWrite.count_RX_FULL = 0;
-    i2cReadWrite.count_STOP_DET = 0;
-    i2cReadWrite.count_TX_ABRT = 0;
-    i2cReadWrite.count_TX_EMPTY = 0;
-
-    i2c->hw->intr_mask = 
-        I2C_IC_INTR_MASK_M_TX_ABRT_BITS | 
-        I2C_IC_INTR_MASK_M_TX_EMPTY_BITS | 
-        I2C_IC_INTR_MASK_M_STOP_DET_BITS;
-
-    irq_set_enabled(I2C0_IRQ, true);
-
-    isFirst = (i2cReadWrite.ix == 0);
-    isLast = (i2cReadWrite.ix == (i2cReadWrite.txLen - 1));
-
-    i2cReadWrite.i2c->hw->data_cmd =
-            bool_to_bit(isFirst && i2cReadWrite.i2c->restart_on_next) << I2C_IC_DATA_CMD_RESTART_LSB |
-            bool_to_bit(isLast && !i2cReadWrite.txNoStop) << I2C_IC_DATA_CMD_STOP_LSB |
-            i2cReadWrite.buffer[i2cReadWrite.ix++];
+    scheduleTaskOnce(TASK_I2C_WRITE, rtc_val_ms(2), &i2cWrStruct);
+    
+    return 0;
 }
 
-void i2cTriggerReadRegister(
+int i2cTriggerReadRegister(
                 i2c_inst_t * i2c, 
                 uint16_t callbackTask, 
                 rtc_t writeReadDelay, 
@@ -345,45 +364,24 @@ void i2cTriggerReadRegister(
                 bool nostopWrite,
                 bool nostopRead)
 {
-    bool        isFirst;
-    bool        isLast;
+    i2cWrStruct.callbackTask = TASK_I2C_READ;
+    i2cWrStruct.addr = addr;
+    i2cWrStruct.buffer = src;
+    i2cWrStruct.i2c = i2c;
+    i2cWrStruct.len = srcLen;
+    i2cWrStruct.noStop = nostopWrite;
+    i2cWrStruct.readDelay = writeReadDelay;
 
-    i2cReadWrite.txCallbackTask = TASK_I2C_READ;
-    i2cReadWrite.rxCallbackTask = callbackTask;
-    i2cReadWrite.addr = addr;
-    i2cReadWrite.buffer = src;
-    i2cReadWrite.i2c = i2c;
-    i2cReadWrite.txLen = srcLen;
-    i2cReadWrite.rxLen = dstLen;
-    i2cReadWrite.ix = 0;
-    i2cReadWrite.txNoStop = nostopWrite;
-    i2cReadWrite.rxNoStop = nostopRead;
-    i2cReadWrite.readDelay = writeReadDelay;
+    i2cRdStruct.callbackTask = callbackTask;
+    i2cRdStruct.addr = addr;
+    i2cRdStruct.buffer = dst;
+    i2cRdStruct.i2c = i2c;
+    i2cRdStruct.len = dstLen;
+    i2cRdStruct.noStop = nostopRead;
 
-    i2cReadWrite.i2c->hw->enable = 0;
-    i2cReadWrite.i2c->hw->tar = i2cReadWrite.addr;
-    i2cReadWrite.i2c->hw->enable = 1;
-
-    i2cReadWrite.count_RX_FULL = 0;
-    i2cReadWrite.count_STOP_DET = 0;
-    i2cReadWrite.count_TX_ABRT = 0;
-    i2cReadWrite.count_TX_EMPTY = 0;
-
-    i2c->hw->intr_mask = 
-        I2C_IC_INTR_MASK_M_TX_ABRT_BITS | 
-        I2C_IC_INTR_MASK_M_TX_EMPTY_BITS | 
-        I2C_IC_INTR_MASK_M_RX_FULL_BITS | 
-        I2C_IC_INTR_MASK_M_STOP_DET_BITS;
-
-    irq_set_enabled(I2C0_IRQ, true);
-
-    isFirst = (i2cReadWrite.ix == 0);
-    isLast = (i2cReadWrite.ix == (i2cReadWrite.txLen - 1));
-
-    i2cReadWrite.i2c->hw->data_cmd =
-            bool_to_bit(isFirst && i2cReadWrite.i2c->restart_on_next) << I2C_IC_DATA_CMD_RESTART_LSB |
-            bool_to_bit(isLast && !i2cReadWrite.txNoStop) << I2C_IC_DATA_CMD_STOP_LSB |
-            i2cReadWrite.buffer[i2cReadWrite.ix++];
+    scheduleTaskOnce(TASK_I2C_WRITE, rtc_val_ms(2), &i2cWrStruct);
+    
+    return 0;
 }
 
 int i2cReadBlocking(i2c_inst_t * i2c, uint8_t addr, uint8_t * dst, size_t len, bool nostop) {

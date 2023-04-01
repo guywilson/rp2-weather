@@ -48,7 +48,7 @@ void setup(void) {
     gpio_set_function(I2C_SDA_ALT_PIN, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SLK_ALT_PIN, GPIO_FUNC_I2C);
 
-    lgOpen(uart0, LOG_LEVEL_ALL);
+    lgOpen(uart0, LOG_LEVEL_FATAL | LOG_LEVEL_ERROR | LOG_LEVEL_STATUS);
 
 	if (initSensors(i2c0)) {
 		lgLogError("ERR: Sensor init");
@@ -75,12 +75,13 @@ int main(void) {
 		turnOff(LED_ONBOARD);
 	}
 
-	initScheduler(5);
+	initScheduler(6);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &WatchdogTask);
 	registerTask(TASK_I2C_SENSOR, &taskI2CSensor);
     registerTask(TASK_I2C_READ, &taskI2CRead);
+    registerTask(TASK_I2C_WRITE, &taskI2CWrite);
     registerTask(TASK_ADC, &taskADC);
 
 	scheduleTaskOnce(
