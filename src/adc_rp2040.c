@@ -114,6 +114,7 @@ void adcInit() {
     adc_irq_set_enabled(true);
 
     irq_set_exclusive_handler(ADC_IRQ_FIFO, adcIRQ);
+    irq_set_enabled(ADC_IRQ_FIFO, true);
 
     adc_run(true);
 }
