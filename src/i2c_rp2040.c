@@ -260,14 +260,7 @@ uint32_t i2cInit(i2c_inst_t *i2c, uint32_t baudrate) {
 
     memset(&i2cReadWrite, 0, sizeof(i2c_read_write_t));
 
-    i2c->hw->intr_mask = 
-        I2C_IC_INTR_MASK_M_TX_ABRT_BITS | 
-        I2C_IC_INTR_MASK_M_TX_EMPTY_BITS | 
-        I2C_IC_INTR_MASK_M_STOP_DET_BITS | 
-        I2C_IC_INTR_MASK_M_RX_FULL_BITS;
-
     irq_set_exclusive_handler(I2C0_IRQ, irqI2CHandler);
-    irq_set_enabled(I2C0_IRQ, true);
 
     // Re-sets i2c->hw->enable upon returning:
     return i2c_set_baudrate(i2c, baudrate);
@@ -296,6 +289,8 @@ void i2cTriggerRead(i2c_inst_t * i2c, uint16_t callbackTask, uint8_t addr, uint8
         I2C_IC_INTR_MASK_M_TX_ABRT_BITS | 
         I2C_IC_INTR_MASK_M_RX_FULL_BITS | 
         I2C_IC_INTR_MASK_M_STOP_DET_BITS;
+
+    irq_set_enabled(I2C0_IRQ, true);
 
     scheduleTaskOnce(TASK_I2C_READ, rtc_val_ms(2), &i2cReadWrite);
 }
@@ -326,6 +321,8 @@ void i2cTriggerWrite(i2c_inst_t * i2c, uint16_t callbackTask, uint8_t addr, uint
         I2C_IC_INTR_MASK_M_TX_ABRT_BITS | 
         I2C_IC_INTR_MASK_M_TX_EMPTY_BITS | 
         I2C_IC_INTR_MASK_M_STOP_DET_BITS;
+
+    irq_set_enabled(I2C0_IRQ, true);
 
     isFirst = (i2cReadWrite.ix == 0);
     isLast = (i2cReadWrite.ix == (i2cReadWrite.txLen - 1));
@@ -377,6 +374,8 @@ void i2cTriggerReadRegister(
         I2C_IC_INTR_MASK_M_TX_EMPTY_BITS | 
         I2C_IC_INTR_MASK_M_RX_FULL_BITS | 
         I2C_IC_INTR_MASK_M_STOP_DET_BITS;
+
+    irq_set_enabled(I2C0_IRQ, true);
 
     isFirst = (i2cReadWrite.ix == 0);
     isLast = (i2cReadWrite.ix == (i2cReadWrite.txLen - 1));
