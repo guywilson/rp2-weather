@@ -13,6 +13,8 @@
 
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 
 #ifdef UNIT_TEST_MODE
@@ -543,7 +545,7 @@ void deregisterTask(uint16_t taskID)
 ** Returns:		void 
 **
 ******************************************************************************/
-void scheduleTask(uint16_t taskID, rtc_t time, PTASKPARM p)
+void scheduleTask(uint16_t taskID, rtc_t time, bool isPeriodic, PTASKPARM p)
 {
 	PTASKDESC	td = NULL;
 
@@ -554,42 +556,42 @@ void scheduleTask(uint16_t taskID, rtc_t time, PTASKPARM p)
 		td->delay = time;
 		td->scheduledTime = _getScheduledTime(td->startTime, td->delay);
 		td->isScheduled = 1;
-		td->isPeriodic = 1;
+		td->isPeriodic = (uint8_t)isPeriodic;
 		td->pParameter = p;
 	}
 }
 
-/******************************************************************************
-**
-** Name: scheduleTaskOnce()
-**
-** Description: Schedules the task to run after the specified delay. A task
-** must be registered using registerTask() before it can be scheduled.
-**
-** Parameters:	
-** uint16_t		taskID		The unique ID for the task
-** rtc_t		time		Number of ms in the future for the task to run
-** uint8_t		priority	The priority of the task
-** PTASKPARM	p			Pointer to the task parameters, can be NULL
-**
-** Returns:		void 
-**
-******************************************************************************/
-void scheduleTaskOnce(uint16_t taskID, rtc_t time, PTASKPARM p)
-{
-	PTASKDESC	td = NULL;
+// /******************************************************************************
+// **
+// ** Name: scheduleTaskOnce()
+// **
+// ** Description: Schedules the task to run after the specified delay. A task
+// ** must be registered using registerTask() before it can be scheduled.
+// **
+// ** Parameters:	
+// ** uint16_t		taskID		The unique ID for the task
+// ** rtc_t		time		Number of ms in the future for the task to run
+// ** uint8_t		priority	The priority of the task
+// ** PTASKPARM	p			Pointer to the task parameters, can be NULL
+// **
+// ** Returns:		void 
+// **
+// ******************************************************************************/
+// void scheduleTaskOnce(uint16_t taskID, rtc_t time, PTASKPARM p)
+// {
+// 	PTASKDESC	td = NULL;
 
-	td = _findTaskByID(taskID);
+// 	td = _findTaskByID(taskID);
 
-	if (td != NULL) {
-		td->startTime = getRTCClockCount();
-		td->delay = time;
-		td->scheduledTime = _getScheduledTime(td->startTime, td->delay);
-		td->isScheduled = 1;
-		td->isPeriodic = 0;
-		td->pParameter = p;
-	}
-}
+// 	if (td != NULL) {
+// 		td->startTime = getRTCClockCount();
+// 		td->delay = time;
+// 		td->scheduledTime = _getScheduledTime(td->startTime, td->delay);
+// 		td->isScheduled = 1;
+// 		td->isPeriodic = 0;
+// 		td->pParameter = p;
+// 	}
+// }
 
 /******************************************************************************
 **

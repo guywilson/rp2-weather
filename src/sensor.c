@@ -183,5 +183,5 @@ void taskI2CSensor(PTASKPARM p) {
             break;
     }
 
-    scheduleTaskOnce(TASK_I2C_SENSOR, delay, NULL);
+    scheduleTask(TASK_I2C_SENSOR, delay, false, NULL);
 }

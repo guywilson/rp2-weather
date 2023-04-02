@@ -154,11 +154,11 @@ void taskI2CWrite(PTASKPARM p) {
             abort = false;
             ix = 0;
 
-            scheduleTaskOnce(i2cWrite->callbackTask, i2cWrite->readDelay, &i2cRdStruct);
+            scheduleTask(i2cWrite->callbackTask, i2cWrite->readDelay, false, &i2cRdStruct);
             return;
     }
 
-    scheduleTaskOnce(TASK_I2C_WRITE, delay, p);
+    scheduleTask(TASK_I2C_WRITE, delay, false, p);
 }
 
 void taskI2CRead(PTASKPARM p) {
@@ -243,11 +243,11 @@ void taskI2CRead(PTASKPARM p) {
             state = I2C_READ_STATE_BEGIN;
             ix = 0;
 
-            scheduleTaskOnce(i2cRead->callbackTask, rtc_val_ms(5), NULL);
+            scheduleTask(i2cRead->callbackTask, rtc_val_ms(5), false, NULL);
             return;
     }
 
-    scheduleTaskOnce(TASK_I2C_READ, delay, p);
+    scheduleTask(TASK_I2C_READ, delay, false, p);
 }
 
 static uint32_t i2cSetBaudrate(i2c_inst_t *i2c, uint32_t baudrate) {
@@ -334,7 +334,7 @@ int i2cTriggerRead(i2c_inst_t * i2c, uint16_t callbackTask, uint8_t addr, uint8_
     i2cRdStruct.len = len;
     i2cRdStruct.noStop = nostop;
 
-    scheduleTaskOnce(TASK_I2C_READ, rtc_val_ms(2), &i2cRdStruct);
+    scheduleTask(TASK_I2C_READ, rtc_val_ms(2), false, &i2cRdStruct);
     
     return 0;
 }
@@ -347,7 +347,7 @@ int i2cTriggerWrite(i2c_inst_t * i2c, uint16_t callbackTask, uint8_t addr, uint8
     i2cWrStruct.len = len;
     i2cWrStruct.noStop = nostop;
 
-    scheduleTaskOnce(TASK_I2C_WRITE, rtc_val_ms(2), &i2cWrStruct);
+    scheduleTask(TASK_I2C_WRITE, rtc_val_ms(2), false, &i2cWrStruct);
     
     return 0;
 }
@@ -379,7 +379,7 @@ int i2cTriggerReadRegister(
     i2cRdStruct.len = dstLen;
     i2cRdStruct.noStop = nostopRead;
 
-    scheduleTaskOnce(TASK_I2C_WRITE, rtc_val_ms(2), &i2cWrStruct);
+    scheduleTask(TASK_I2C_WRITE, rtc_val_ms(2), false, &i2cWrStruct);
     
     return 0;
 }

@@ -16,18 +16,20 @@ void HeartbeatTask(PTASKPARM p) {
     turnOff(LED_ONBOARD);
     on = 0;
 
-    scheduleTaskOnce(
+    scheduleTask(
             TASK_HEARTBEAT, 
             rtc_val_ms(getCoreID() ? HEARBEAT_OFF_TIME : HEARTBEAT_ON_TIME), 
+            false,
             NULL);
   }
   else {
     turnOn(LED_ONBOARD);
     on = 1;
 
-    scheduleTaskOnce(
+    scheduleTask(
             TASK_HEARTBEAT, 
             rtc_val_ms(getCoreID() ? HEARTBEAT_ON_TIME : HEARBEAT_OFF_TIME), 
+            false,
             NULL);
   }
 }

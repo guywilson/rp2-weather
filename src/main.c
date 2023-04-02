@@ -84,22 +84,25 @@ int main(void) {
     registerTask(TASK_I2C_WRITE, &taskI2CWrite);
     registerTask(TASK_ADC, &taskADC);
 
-	scheduleTaskOnce(
+	scheduleTask(
 			TASK_HEARTBEAT,
 			rtc_val_ms(950),
+            false,
 			NULL);
 
 	/*
 	** Start the sensor chain...
 	*/
-	scheduleTaskOnce(
+	scheduleTask(
 			TASK_I2C_SENSOR, 
 			rtc_val_ms(4000), 
+            false, 
 			NULL);
 
 	scheduleTask(
 			TASK_WATCHDOG, 
 			rtc_val_ms(50), 
+            true, 
 			NULL);
 
 	/*

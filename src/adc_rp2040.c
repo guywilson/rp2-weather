@@ -24,25 +24,26 @@ void adcIRQ() {
         memset(&adcSamples, 0, sizeof(adc_samples_t));
     }
 
-    channel = adc_get_selected_input();
+    /*
+    ** The first sample in our FIFO will be from channel 1...
+    */
+    channel = ADC_CHANNEL_WIND_DIR;
 
     while (!adc_fifo_is_empty()) {
         switch (channel) {
+            case ADC_CHANNEL_NOT_CONNECTED:
+                break;
+
             case ADC_CHANNEL_WIND_DIR:
                 adcSamples.adcWindDir += adc_fifo_get();
                 break;
 
-            case ADC_CHANNEL_BATTERY_VOLTAGE:
-                adcSamples.adcBatteryVoltage += adc_fifo_get();
-                break;
-
             case ADC_CHANNEL_BATTERY_TEMPERATURE:
                 adcSamples.adcBatteryTemperature += adc_fifo_get();
+                break;
 
-                // Deliberately fall through...
-
-            case ADC_CHANNEL_NOT_CONNECTED:
-                channel++;
+            case ADC_CHANNEL_BATTERY_VOLTAGE:
+                adcSamples.adcBatteryVoltage += adc_fifo_get();
                 break;
 
             case ADC_CHANNEL_INTERNAL_TEMPERATURE:
@@ -53,7 +54,7 @@ void adcIRQ() {
         channel++;
 
         if (channel == 5) {
-            channel = 0;
+            channel = 1;
         }
     }
 
@@ -70,7 +71,7 @@ void adcIRQ() {
         adcSamples.adcBatteryTemperature = (adcSamples.adcBatteryTemperature >> 4);
         adcSamples.adcRP2040Temperature = (adcSamples.adcRP2040Temperature >> 4);
 
-        scheduleTaskOnce(TASK_ADC, rtc_val_ms(1), &adcSamples);
+        scheduleTask(TASK_ADC, rtc_val_ms(1), false, &adcSamples);
     }
 }
 
@@ -97,7 +98,7 @@ void adcInit() {
     /*
     ** On-chip temperature sensor...
     */
-    adc_select_input(ADC_CHANNEL_INTERNAL_TEMPERATURE);
+    adc_select_input(ADC_CHANNEL_WIND_DIR);
 
     adc_set_temp_sensor_enabled(true);
 
@@ -106,7 +107,7 @@ void adcInit() {
     */
     adc_set_clkdiv(63999.0f);
     
-    adc_set_round_robin(0x17);
+    adc_set_round_robin(0x1E);
 
     adc_fifo_drain();
     adc_fifo_setup(true, false, 4, false, false);
