@@ -94,6 +94,7 @@ void adcInit() {
     adc_gpio_init(26);
     adc_gpio_init(27);
     adc_gpio_init(28);
+    adc_gpio_init(29);
 
     /*
     ** On-chip temperature sensor...
