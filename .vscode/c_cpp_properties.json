@@ -1,0 +1,37 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "/Users/guy/Library/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_adc/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_base/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_claim/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_clocks/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_divider/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_dma/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_exception/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_flash/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_gpio/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_i2c/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_interp/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_irq/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_pio/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_pll/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_pwm/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_resets/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_rtc/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_spi/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_sync/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_timer/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_uart/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_vreg/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_watchdog/include",
+                "/Users/guy/Library/pico-sdk/src/rp2_common/hardware_xosc/include"
+            ],
+            "cStandard": "gnu17",
+            "cppStandard": "gnu++14"
+        }
+    ],
+    "version": 4
+}

@@ -35,6 +35,7 @@ if (PICO_ON_DEVICE)
             src/i2c_rp2040.c
             src/spi_rp2040.c
             src/adc_rp2040.c
+            src/pio_rp2040.c
             src/logger.c
             src/sensor.c
             src/TMP117.c

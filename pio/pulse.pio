@@ -48,9 +48,23 @@
 ;         # Since the PIO can only decrement, convert it back into +ve
 ;         return -self.sm.get() & 0x7fffffff
 
+;
+; Read X from FIFO
+; Copy X to Y
+;   Wait for pulse
+;   Repeat & decrement X
+; When X = 0
+; Write Y to FIFO
+; Back to start
+;
 .program pulse
 
 ; PIO pulse counter implementation
+begin:
+    pull    block
+    out     X, 32
+    mov     Y, X
+
 loop:
     wait    0 pin 16
     wait    1 pin 16
@@ -58,3 +72,5 @@ loop:
 
 output:
     in      Y, 32
+    push    noblock
+    jmp     begin

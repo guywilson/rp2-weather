@@ -17,6 +17,7 @@
 #include "serial_rp2040.h"
 #include "i2c_rp2040.h"
 #include "adc_rp2040.h"
+#include "pio_rp2040.h"
 #include "heartbeat.h"
 #include "watchdog.h"
 #include "logger.h"
@@ -75,7 +76,7 @@ int main(void) {
 		turnOff(LED_ONBOARD);
 	}
 
-	initScheduler(6);
+	initScheduler(8);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &WatchdogTask);
@@ -83,6 +84,8 @@ int main(void) {
     registerTask(TASK_I2C_READ, &taskI2CRead);
     registerTask(TASK_I2C_WRITE, &taskI2CWrite);
     registerTask(TASK_ADC, &taskADC);
+    registerTask(TASK_ANEMOMETER, &taskAnemometer);
+    registerTask(TASK_RAIN_GAUGE, &taskRainGuage);
 
 	scheduleTask(
 			TASK_HEARTBEAT,
@@ -98,6 +101,18 @@ int main(void) {
 			rtc_val_ms(4000), 
             false, 
 			NULL);
+
+    scheduleTask(
+            TASK_ANEMOMETER,
+            rtc_val_sec(1),
+            true,
+            NULL);
+
+    scheduleTask(
+            TASK_RAIN_GAUGE,
+            rtc_val_hr(1),
+            true,
+            NULL);
 
 	scheduleTask(
 			TASK_WATCHDOG, 
