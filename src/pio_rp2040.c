@@ -12,8 +12,46 @@
 #include "sensor.h"
 #include "pulse.h"
 
-void pioInit(void) {
+#define PIO_PIN_ANEMOMETER                  16
+#define PIO_PIN_RAIN_GAUGE                  17
 
+static volatile uint32_t        anemometerCount = 0;
+static volatile uint32_t        rainGaugeCount = 0;
+
+void irqPIO0(void) {
+
+}
+
+void irqPIO1(void) {
+
+}
+
+void pioInit() {
+    uint            anemometerOffset;
+    uint            rainGaugeOffset;
+
+    anemometerOffset = pio_add_program(pio0, &pulse_program);
+    pio_sm_config anemometerConfig = pulse_program_get_default_config(anemometerOffset);
+
+    rainGaugeOffset = pio_add_program(pio1, &pulse_program);
+    pio_sm_config rainGaugeConfig = pulse_program_get_default_config(rainGaugeOffset);
+    
+    sm_config_set_in_pins(&anemometerConfig, PIO_PIN_ANEMOMETER);
+    sm_config_set_in_pins(&rainGaugeConfig, PIO_PIN_RAIN_GAUGE);
+
+    sm_config_set_in_shift(&anemometerConfig, false, true, 8);
+
+    irq_set_exclusive_handler(pis_interrupt0, irqPIO0);
+    irq_set_exclusive_handler(pis_interrupt1, irqPIO1);
+
+    pio_set_irq0_source_enabled(pio0, pis_interrupt0, true);
+    pio_set_irq1_source_enabled(pio1, pis_interrupt1, true);
+
+    pio_sm_init(pio0, 0, anemometerOffset, &anemometerConfig);
+    pio_sm_set_enabled(pio0, 0, true);
+
+    pio_sm_init(pio1, 0, rainGaugeOffset, &rainGaugeConfig);
+    pio_sm_set_enabled(pio1, 0, true);
 }
 
 /*
