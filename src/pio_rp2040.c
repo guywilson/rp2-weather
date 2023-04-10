@@ -7,6 +7,7 @@
 #include "hardware/pio.h"
 #include "pio_rp2040.h"
 #include "rtc_rp2040.h"
+#include "logger.h"
 #include "scheduler.h"
 #include "taskdef.h"
 #include "sensor.h"
@@ -102,6 +103,8 @@ void taskAnemometer(PTASKPARM p) {
         */
         pWeather->rawWindspeed = totalCount >> 4;
 
+        lgLogDebug("Avg windspeed count: %d", pWeather->rawWindspeed);
+
         ix = 0;
     }
 }
@@ -137,4 +140,6 @@ void taskRainGuage(PTASKPARM p) {
     ** As this task runs once per hour, this equates to pulses/hour...
     */
     pWeather->rawRainfall = pulseCount;
+
+    lgLogDebug("Rainfall count: %d", pWeather->rawRainfall);
 }
