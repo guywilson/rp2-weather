@@ -10,31 +10,24 @@
 #include "scheduler.h"
 #include "taskdef.h"
 #include "sensor.h"
-#include "pulse.h"
+#include "anemometer_pulse.pio.h"
+#include "rainfall_pulse.pio.h"
 
-#define PIO_PIN_ANEMOMETER                  16
-#define PIO_PIN_RAIN_GAUGE                  17
+#define PIO_PIN_ANEMOMETER                  18
+#define PIO_PIN_RAIN_GAUGE                  19
 
 #define PIO_0_COUNTER_RESET                 512
 #define PIO_1_COUNTER_RESET                 512
-
-/*
-** Wind speed in m/s:
-**
-** anemometer diameter (m) * pi * anemometer_factor (1.18)
-** = 0.18 * pi * 1.18
-*/
-#define ANEMOMETER_METRES_PER_SEC           0.6673f
 
 void pioInit() {
     uint            anemometerOffset;
     uint            rainGaugeOffset;
 
-    anemometerOffset = pio_add_program(pio0, &pulse_program);
-    pio_sm_config anemometerConfig = pulse_program_get_default_config(anemometerOffset);
+    anemometerOffset = pio_add_program(pio0, &anemometer_pulse_program);
+    pio_sm_config anemometerConfig = anemometer_pulse_program_get_default_config(anemometerOffset);
 
-    rainGaugeOffset = pio_add_program(pio1, &pulse_program);
-    pio_sm_config rainGaugeConfig = pulse_program_get_default_config(rainGaugeOffset);
+    rainGaugeOffset = pio_add_program(pio1, &rainfall_pulse_program);
+    pio_sm_config rainGaugeConfig = rainfall_pulse_program_get_default_config(rainGaugeOffset);
 
     sm_config_set_in_pins(&anemometerConfig, PIO_PIN_ANEMOMETER);
     sm_config_set_in_pins(&rainGaugeConfig, PIO_PIN_RAIN_GAUGE);
