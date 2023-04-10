@@ -60,17 +60,7 @@
 .program pulse
 
 ; PIO pulse counter implementation
-begin:
-    pull    block
-    out     X, 32
-    mov     Y, X
-
 loop:
     wait    0 pin 16
     wait    1 pin 16
     jmp     X-- loop
-
-output:
-    in      Y, 32
-    push    noblock
-    jmp     begin

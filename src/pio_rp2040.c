@@ -15,16 +15,8 @@
 #define PIO_PIN_ANEMOMETER                  16
 #define PIO_PIN_RAIN_GAUGE                  17
 
-static volatile uint32_t        anemometerCount = 0;
-static volatile uint32_t        rainGaugeCount = 0;
-
-void irqPIO0(void) {
-
-}
-
-void irqPIO1(void) {
-
-}
+#define PIO_0_COUNTER_RESET                 512
+#define PIO_1_COUNTER_RESET                 512
 
 void pioInit() {
     uint            anemometerOffset;
@@ -35,17 +27,26 @@ void pioInit() {
 
     rainGaugeOffset = pio_add_program(pio1, &pulse_program);
     pio_sm_config rainGaugeConfig = pulse_program_get_default_config(rainGaugeOffset);
-    
+
     sm_config_set_in_pins(&anemometerConfig, PIO_PIN_ANEMOMETER);
     sm_config_set_in_pins(&rainGaugeConfig, PIO_PIN_RAIN_GAUGE);
 
-    sm_config_set_in_shift(&anemometerConfig, false, true, 8);
-
-    irq_set_exclusive_handler(pis_interrupt0, irqPIO0);
-    irq_set_exclusive_handler(pis_interrupt1, irqPIO1);
-
-    pio_set_irq0_source_enabled(pio0, pis_interrupt0, true);
-    pio_set_irq1_source_enabled(pio1, pis_interrupt1, true);
+    pio_set_irq0_source_enabled(pio0, pis_interrupt0, false);
+    pio_set_irq1_source_enabled(pio1, pis_interrupt1, false);
+    
+    /*
+    ** Initialise X...
+    */
+    pio_sm_put(pio0, 0, PIO_0_COUNTER_RESET);
+    pio_sm_exec(pio0, 0, pio_encode_pull(false, false));
+    pio_sm_exec(pio0, 0, pio_encode_mov(pio_x, pio_osr));
+    
+    /*
+    ** Initialise X...
+    */
+    pio_sm_put(pio1, 0, PIO_1_COUNTER_RESET);
+    pio_sm_exec(pio1, 0, pio_encode_pull(false, false));
+    pio_sm_exec(pio1, 0, pio_encode_mov(pio_x, pio_osr));
 
     pio_sm_init(pio0, 0, anemometerOffset, &anemometerConfig);
     pio_sm_set_enabled(pio0, 0, true);
@@ -61,7 +62,27 @@ void pioInit() {
 ** our anemometer, we can work out our wind speed.
 */
 void taskAnemometer(PTASKPARM p) {
+    uint32_t            pulseCount;
+    weather_packet_t *  pWeather;
 
+    pWeather = getWeatherPacket();
+
+    /*
+    ** Get the pulse count...
+    */
+    pio_sm_exec(pio0, 0, pio_encode_mov(pio_isr, pio_x));
+    pio_sm_exec(pio0, 0, pio_encode_push(false, false));
+
+    pulseCount = PIO_0_COUNTER_RESET - pio_sm_get(pio0, 0);
+    
+    /*
+    ** Reset X...
+    */
+    pio_sm_put(pio0, 0, PIO_0_COUNTER_RESET);
+    pio_sm_exec(pio0, 0, pio_encode_pull(false, false));
+    pio_sm_exec(pio0, 0, pio_encode_mov(pio_x, pio_osr));
+
+    pWeather->rawWindspeed = pulseCount;
 }
 
 /*
@@ -71,5 +92,25 @@ void taskAnemometer(PTASKPARM p) {
 ** our tipping bucket, we can work out our rainfall.
 */
 void taskRainGuage(PTASKPARM p) {
+    uint32_t            pulseCount;
+    weather_packet_t *  pWeather;
 
+    pWeather = getWeatherPacket();
+
+    /*
+    ** Get the pulse count...
+    */
+    pio_sm_exec(pio1, 0, pio_encode_mov(pio_isr, pio_x));
+    pio_sm_exec(pio1, 0, pio_encode_push(false, false));
+
+    pulseCount = PIO_1_COUNTER_RESET - pio_sm_get(pio1, 0);
+    
+    /*
+    ** Reset X...
+    */
+    pio_sm_put(pio1, 0, PIO_0_COUNTER_RESET);
+    pio_sm_exec(pio1, 0, pio_encode_pull(false, false));
+    pio_sm_exec(pio1, 0, pio_encode_mov(pio_x, pio_osr));
+
+    pWeather->rawRainfall = pulseCount;
 }
