@@ -18,6 +18,14 @@
 #define PIO_0_COUNTER_RESET                 512
 #define PIO_1_COUNTER_RESET                 512
 
+/*
+** Wind speed in m/s:
+**
+** anemometer diameter (m) * pi * anemometer_factor (1.18)
+** = 0.18 * pi * 1.18
+*/
+#define ANEMOMETER_METRES_PER_SEC           0.6673f
+
 void pioInit() {
     uint            anemometerOffset;
     uint            rainGaugeOffset;
@@ -62,10 +70,12 @@ void pioInit() {
 ** our anemometer, we can work out our wind speed.
 */
 void taskAnemometer(PTASKPARM p) {
-    uint32_t            pulseCount;
+    static uint16_t     averageBuffer[16];
+    static int          ix = 0;
+    int                 i;
+    uint16_t            pulseCount = 0;
+    uint16_t            totalCount = 0;
     weather_packet_t *  pWeather;
-
-    pWeather = getWeatherPacket();
 
     /*
     ** Get the pulse count...
@@ -73,7 +83,7 @@ void taskAnemometer(PTASKPARM p) {
     pio_sm_exec(pio0, 0, pio_encode_mov(pio_isr, pio_x));
     pio_sm_exec(pio0, 0, pio_encode_push(false, false));
 
-    pulseCount = PIO_0_COUNTER_RESET - pio_sm_get(pio0, 0);
+    pulseCount = PIO_0_COUNTER_RESET - (uint16_t)pio_sm_get(pio0, 0);
     
     /*
     ** Reset X...
@@ -82,7 +92,25 @@ void taskAnemometer(PTASKPARM p) {
     pio_sm_exec(pio0, 0, pio_encode_pull(false, false));
     pio_sm_exec(pio0, 0, pio_encode_mov(pio_x, pio_osr));
 
-    pWeather->rawWindspeed = pulseCount;
+    /*
+    ** As this task runs once per second, this equates to pulses/sec...
+    */
+    averageBuffer[ix++] = pulseCount;
+
+    if (ix == 16) {
+        for (i = 0;i < 16;i++) {
+            totalCount += averageBuffer[i];
+        }
+
+        pWeather = getWeatherPacket();
+
+        /*
+        ** Get the average windspeed over 16 measurements (16 seconds)...
+        */
+        pWeather->rawWindspeed = totalCount >> 4;
+
+        ix = 0;
+    }
 }
 
 /*
@@ -92,7 +120,7 @@ void taskAnemometer(PTASKPARM p) {
 ** our tipping bucket, we can work out our rainfall.
 */
 void taskRainGuage(PTASKPARM p) {
-    uint32_t            pulseCount;
+    uint16_t            pulseCount;
     weather_packet_t *  pWeather;
 
     pWeather = getWeatherPacket();
@@ -103,7 +131,7 @@ void taskRainGuage(PTASKPARM p) {
     pio_sm_exec(pio1, 0, pio_encode_mov(pio_isr, pio_x));
     pio_sm_exec(pio1, 0, pio_encode_push(false, false));
 
-    pulseCount = PIO_1_COUNTER_RESET - pio_sm_get(pio1, 0);
+    pulseCount = PIO_1_COUNTER_RESET - (uint16_t)pio_sm_get(pio1, 0);
     
     /*
     ** Reset X...
@@ -112,5 +140,8 @@ void taskRainGuage(PTASKPARM p) {
     pio_sm_exec(pio1, 0, pio_encode_pull(false, false));
     pio_sm_exec(pio1, 0, pio_encode_mov(pio_x, pio_osr));
 
+    /*
+    ** As this task runs once per hour, this equates to pulses/hour...
+    */
     pWeather->rawRainfall = pulseCount;
 }
