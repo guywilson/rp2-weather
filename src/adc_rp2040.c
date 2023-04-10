@@ -11,6 +11,33 @@
 #include "taskdef.h"
 #include "sensor.h"
 
+/*
+** Wind direction values, a corresponding value
+** will be read by the ADC. Using a resistor between
+** the 3.3v supply and the weather vane creates a 
+** voltage divider. We assume that R1 in the divider
+** is 4.7Kohm 
+** 
+** Degrees          Resistance          Direction       Voltage         ~ADC
+** -------          ----------          ---------       -------         ----
+**   0.0            33K                 N               2.889           3586
+**  22.5            6.57K               NNE             1.924           2388
+**  45.0            8.2K                NE              2.098           2604
+**  67.5            891                 ENE             0.526            653
+**  90.0            1K                  E               0.579            719
+** 112.5            688                 ESE             0.421            523
+** 135.0            2.2K                SE              1.052           1306
+** 157.5            1.41K               SSE             0.762            946
+** 180.0            3.9K                S               1.497           1858
+** 202.5            3.14K               SSW             1.322           1641
+** 225.0            16K                 SW              2.551           3166
+** 247.5            14.12K              WSW             2.476           3073
+** 270.0            120K                W               3.176           3942
+** 292.5            42.12K              NWN             2.969           3685
+** 315.0            64.9K               NW              3.077           3819
+** 337.5            21.88K              NNW             2.716           3371
+**
+*/
 adc_samples_t           adcSamples;
 
 void adcIRQ() {
