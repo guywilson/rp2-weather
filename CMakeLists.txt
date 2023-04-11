@@ -36,6 +36,7 @@ if (PICO_ON_DEVICE)
             src/spi_rp2040.c
             src/adc_rp2040.c
             src/pio_rp2040.c
+            src/pwm_rp2040.c
             src/logger.c
             src/sensor.c
             src/TMP117.c
@@ -59,7 +60,8 @@ if (PICO_ON_DEVICE)
             hardware_spi 
             hardware_uart
             hardware_pio
-            hardware_adc)
+            hardware_adc
+            hardware_pwm)
 
     # create map/bin/hex file etc.
     pico_add_extra_outputs(rp2-weather)

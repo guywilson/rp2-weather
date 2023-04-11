@@ -18,6 +18,7 @@
 #include "i2c_rp2040.h"
 #include "adc_rp2040.h"
 #include "pio_rp2040.h"
+#include "pwm_rp2040.h"
 #include "heartbeat.h"
 #include "watchdog.h"
 #include "logger.h"
@@ -57,6 +58,12 @@ void setup(void) {
 	}
 
     adcInit();
+    pioInit();
+
+    /*
+    ** Use the PWM to mimic pulses from an anemometer...
+    */
+    pwmInit();
 
     otp = getOTPValues();
 
