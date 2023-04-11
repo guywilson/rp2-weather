@@ -10,7 +10,7 @@
 #define ALARM_NUM 0
 #define ALARM_IRQ TIMER_IRQ_0
 
-#define RTC_INTERRUPT_CYCLE             250U
+#define RTC_INTERRUPT_CYCLE             1000U
 
 void rtcDelay(uint32_t delay_us) {
     uint32_t            startTime;

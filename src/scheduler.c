@@ -157,6 +157,8 @@ void _rtcISR()
 #else
 	_realTimeClock++;
 #endif
+
+#ifdef SCHED_ENABLE_TICK_TASK
 	/*
 	 * Run the tick task, defaults to the nullTick() function.
 	 *
@@ -164,6 +166,7 @@ void _rtcISR()
 	 * the scheduler's control. Also, there can be only 1 tick task...
 	 */
 	_tickTask();
+#endif
 }
 
 /******************************************************************************

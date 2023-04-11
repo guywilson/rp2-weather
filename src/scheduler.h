@@ -87,7 +87,7 @@ typedef CPU_RATIO *	PCPU_RATIO;
  * RTC tick task, set the prescaler here. If you want the interrupt
  * frequency and clock frequency to be the same, simply set this to 1...
  */
-#define RTC_INTERRUPT_PRESCALER			4
+#define RTC_INTERRUPT_PRESCALER			1
 
 /******************************************************************************
 **
