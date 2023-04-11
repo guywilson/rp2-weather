@@ -17,8 +17,8 @@
 #define PIO_PIN_ANEMOMETER                  18
 #define PIO_PIN_RAIN_GAUGE                  19
 
-#define PIO_0_COUNTER_RESET                 512
-#define PIO_1_COUNTER_RESET                 512
+#define PIO_0_COUNTER_RESET               2048
+#define PIO_1_COUNTER_RESET                512
 
 void pioInit() {
     uint            anemometerOffset;
