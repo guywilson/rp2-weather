@@ -107,7 +107,10 @@
 #define NRF24L01_FEATURE_EN_PAYLOAD_WITH_ACK        0x02
 #define NRF24L01_FEATURE_EN_TX_NO_ACK               0x01
 
-int nRF24L01_setup(spi_inst_t * spi); 
+int nRF24L01_setup(spi_inst_t * spi);
+void nRF24L01_powerUpTx(spi_inst_t * spi);
+void nRF24L01_powerUpRx(spi_inst_t * spi);
+void nRF24L01_powerDown(spi_inst_t * spi);
 int nRF24L01_transmit_buffer(
             spi_inst_t * spi, 
             uint8_t * buf, 

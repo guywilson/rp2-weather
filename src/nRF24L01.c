@@ -139,28 +139,6 @@ uint8_t nRF24L01_readRegister(spi_inst_t * spi, uint8_t reg, uint8_t * pStatusRe
     return value;
 }
 
-void _powerUpTx(spi_inst_t * spi) {
-    uint8_t         statusReg;
-
-    _registerMap.CONFIG &= ~NRF24L01_CFG_MODE_RX;
-    _registerMap.CONFIG |= (NRF24L01_CFG_MODE_TX | NRF24L01_CFG_POWER_UP);
-    nRF24L01_writeRegister(spi, NRF24L01_REG_CONFIG, _registerMap.CONFIG, &statusReg);
-}
-
-void _powerUpRx(spi_inst_t * spi) {
-    uint8_t         statusReg;
-
-    _registerMap.CONFIG |= (NRF24L01_CFG_MODE_RX | NRF24L01_CFG_POWER_UP);
-    nRF24L01_writeRegister(spi, NRF24L01_REG_CONFIG, _registerMap.CONFIG, &statusReg);
-}
-
-void _powerDown(spi_inst_t * spi) {
-    uint8_t         statusReg;
-
-    _registerMap.CONFIG &= ~NRF24L01_CFG_POWER_UP;
-    nRF24L01_writeRegister(spi, NRF24L01_REG_CONFIG, _registerMap.CONFIG, &statusReg);
-}
-
 void _setRxAddress(spi_inst_t * spi, int pipe, const char * pszAddress) {
     uint8_t         statusReg;
 
@@ -320,9 +298,29 @@ int nRF24L01_setup(spi_inst_t * spi) {
     //             0x01, 
     //             &statusReg);
 
-    _powerUpTx(spi);
-
     return error;
+}
+
+void nRF24L01_powerUpTx(spi_inst_t * spi) {
+    uint8_t         statusReg;
+
+    _registerMap.CONFIG &= ~NRF24L01_CFG_MODE_RX;
+    _registerMap.CONFIG |= (NRF24L01_CFG_MODE_TX | NRF24L01_CFG_POWER_UP);
+    nRF24L01_writeRegister(spi, NRF24L01_REG_CONFIG, _registerMap.CONFIG, &statusReg);
+}
+
+void nRF24L01_powerUpRx(spi_inst_t * spi) {
+    uint8_t         statusReg;
+
+    _registerMap.CONFIG |= (NRF24L01_CFG_MODE_RX | NRF24L01_CFG_POWER_UP);
+    nRF24L01_writeRegister(spi, NRF24L01_REG_CONFIG, _registerMap.CONFIG, &statusReg);
+}
+
+void nRF24L01_powerDown(spi_inst_t * spi) {
+    uint8_t         statusReg;
+
+    _registerMap.CONFIG &= ~NRF24L01_CFG_POWER_UP;
+    nRF24L01_writeRegister(spi, NRF24L01_REG_CONFIG, _registerMap.CONFIG, &statusReg);
 }
 
 int nRF24L01_transmit_buffer(

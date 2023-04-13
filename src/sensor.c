@@ -31,6 +31,8 @@
 #define STATE_READ_PRESSURE_2       0x0301
 #define STATE_READ_LUX_1            0x0400
 #define STATE_READ_LUX_2            0x0401
+#define STATE_SEND_BEGIN            0x0700
+#define STATE_SEND_FINISH           0x0701
 #define STATE_SEND_PACKET           0x07FF
 
 weather_packet_t            weather;
@@ -170,12 +172,30 @@ void taskI2CSensor(PTASKPARM p) {
 
             delay = rtc_val_sec(19);
 
+            state = STATE_SEND_BEGIN;
+            break;
+
+        case STATE_SEND_BEGIN:
+            nRF24L01_powerUpTx(spi0);
+
+            /*
+            ** Give the device 2ms to power up...
+            */
+            delay = rtc_val_ms(150);
             state = STATE_SEND_PACKET;
             break;
 
         case STATE_SEND_PACKET:
             memcpy(buffer, &weather, sizeof(weather_packet_t));
             nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
+
+            delay = rtc_val_ms(125);
+
+            state = STATE_SEND_FINISH;
+            break;
+
+        case STATE_SEND_FINISH:
+            nRF24L01_powerDown(spi0);
 
             delay = rtc_val_ms(250);
 
