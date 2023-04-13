@@ -197,7 +197,7 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_SEND_FINISH:
             nRF24L01_powerDown(spi0);
 
-            delay = rtc_val_ms(250);
+            delay = rtc_val_ms(125);
 
             state = STATE_READ_TEMP_1;
             break;
