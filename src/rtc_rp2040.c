@@ -19,7 +19,6 @@ void rtcDelay(uint32_t delay_us) {
     startTime = timer_hw->timerawl;
     endTime = startTime + delay_us;
 
-    // Delay 15us...
     while (timer_hw->timerawl < endTime);
 }
 
