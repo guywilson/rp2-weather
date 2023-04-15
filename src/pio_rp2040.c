@@ -49,17 +49,17 @@ void pioInit() {
     **     jmp X-- loop
     ** .wrap
     */
-    pio0->instr_mem[anemometerOffset]       = pio_encode_set(pio_x, PIO_COUNTER_RESET_ANEMOMETER);
-    pio0->instr_mem[anemometerOffset + 1]   = pio_encode_wait_pin(true, PIO_PIN_ANEMOMETER);
-    pio0->instr_mem[anemometerOffset + 2]   = pio_encode_wait_pin(false, PIO_PIN_ANEMOMETER);
+    pio0->instr_mem[anemometerOffset]       = pio_encode_set(pio_x, 0);
+    pio0->instr_mem[anemometerOffset + 1]   = pio_encode_wait_pin(false, PIO_PIN_ANEMOMETER);
+    pio0->instr_mem[anemometerOffset + 2]   = pio_encode_wait_pin(true, PIO_PIN_ANEMOMETER);
     pio0->instr_mem[anemometerOffset + 3]   = pio_encode_jmp_x_dec(anemometerOffset + 1);
 
     pio_sm_config anemometerConfig = pio_get_default_sm_config();
     sm_config_set_wrap(&anemometerConfig, anemometerOffset, anemometerOffset + 3);
 
-    pio0->instr_mem[rainGaugeOffset]        = pio_encode_set(pio_x, PIO_COUNTER_RESET_RAIN_GAUGE);
-    pio0->instr_mem[rainGaugeOffset + 1]    = pio_encode_wait_pin(true, PIO_PIN_RAIN_GAUGE);
-    pio0->instr_mem[rainGaugeOffset + 2]    = pio_encode_wait_pin(false, PIO_PIN_RAIN_GAUGE);
+    pio0->instr_mem[rainGaugeOffset]        = pio_encode_set(pio_x, 0);
+    pio0->instr_mem[rainGaugeOffset + 1]    = pio_encode_wait_pin(false, PIO_PIN_RAIN_GAUGE);
+    pio0->instr_mem[rainGaugeOffset + 2]    = pio_encode_wait_pin(true, PIO_PIN_RAIN_GAUGE);
     pio0->instr_mem[rainGaugeOffset + 3]    = pio_encode_jmp_x_dec(rainGaugeOffset + 1);
 
     pio_sm_config rainGaugeConfig = pio_get_default_sm_config();
@@ -99,14 +99,12 @@ void taskAnemometer(PTASKPARM p) {
     pio_sm_exec(pio0, PIO_SM_ANEMOMETER, pio_encode_mov(pio_isr, pio_x));
     pio_sm_exec(pio0, PIO_SM_ANEMOMETER, pio_encode_push(false, false));
 
-    pulseCount = PIO_COUNTER_RESET_ANEMOMETER - (uint16_t)pio_sm_get(pio0, PIO_SM_ANEMOMETER);
+    pulseCount = (uint16_t)(-(int32_t)pio_sm_get(pio0, PIO_SM_ANEMOMETER));
     
     /*
     ** Reset X...
     */
-    pio_sm_put(pio0, PIO_SM_ANEMOMETER, PIO_COUNTER_RESET_ANEMOMETER);
-    pio_sm_exec(pio0, PIO_SM_ANEMOMETER, pio_encode_pull(false, false));
-    pio_sm_exec(pio0, PIO_SM_ANEMOMETER, pio_encode_mov(pio_x, pio_osr));
+    pio_sm_restart(pio0, PIO_SM_ANEMOMETER);
 
     /*
     ** As this task runs once per second, this equates to pulses/sec...
