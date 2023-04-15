@@ -11,6 +11,8 @@
 #include "taskdef.h"
 #include "sensor.h"
 
+#define ADC_SAMPLE_BUFFER_SIZE                  8
+
 /*
 ** Wind direction values, a corresponding value
 ** will be read by the ADC. Using a resistor between
@@ -39,18 +41,14 @@
 **
 */
 
-adc_samples_t           adcSamples;
+adc_samples_t           adcSamples[ADC_SAMPLE_BUFFER_SIZE];
 
 void adcIRQ() {
-    static int          numSamples = 0;
+    static int          sampleCount = 0;
     int                 channel;
+    adc_samples_t *     pSamples;
 
-    if (numSamples == 0) {
-        /*
-        ** Clear the structure...
-        */
-        memset(&adcSamples, 0, sizeof(adc_samples_t));
-    }
+    pSamples = &adcSamples[sampleCount];
 
     /*
     ** The first sample in our FIFO will be from channel 1...
@@ -63,19 +61,19 @@ void adcIRQ() {
                 break;
 
             case ADC_CHANNEL_WIND_DIR:
-                adcSamples.adcWindDir += adc_fifo_get();
+                pSamples->adcWindDir = adc_fifo_get();
                 break;
 
             case ADC_CHANNEL_BATTERY_TEMPERATURE:
-                adcSamples.adcBatteryTemperature += adc_fifo_get();
+                pSamples->adcBatteryTemperature = adc_fifo_get();
                 break;
 
             case ADC_CHANNEL_BATTERY_VOLTAGE:
-                adcSamples.adcBatteryVoltage += adc_fifo_get();
+                pSamples->adcBatteryVoltage = adc_fifo_get();
                 break;
 
             case ADC_CHANNEL_INTERNAL_TEMPERATURE:
-                adcSamples.adcRP2040Temperature += adc_fifo_get();
+                pSamples->adcRP2040Temperature = adc_fifo_get();
                 break;
         }
 
@@ -86,38 +84,54 @@ void adcIRQ() {
         }
     }
 
-    numSamples++;
+    sampleCount++;
 
-    if (numSamples == 16) {
-        numSamples = 0;
+    if (sampleCount == ADC_SAMPLE_BUFFER_SIZE) {
+        sampleCount = 0;
 
-        /*
-        ** Average of the last 16 samples...
-        */
-        adcSamples.adcWindDir = (adcSamples.adcWindDir >> 4);
-        adcSamples.adcBatteryVoltage = (adcSamples.adcBatteryVoltage >> 4);
-        adcSamples.adcBatteryTemperature = (adcSamples.adcBatteryTemperature >> 4);
-        adcSamples.adcRP2040Temperature = (adcSamples.adcRP2040Temperature >> 4);
-
-        scheduleTask(TASK_ADC, rtc_val_ms(1), false, &adcSamples);
+        scheduleTask(TASK_ADC, rtc_val_ms(1), false, NULL);
     }
 }
 
 void taskADC(PTASKPARM p) {
+    int                         i;
+    uint16_t                    sampleAvg;
     weather_packet_t *          pWeather;
-    adc_samples_t *             pSamples;
     
     pWeather = getWeatherPacket();
-    pSamples = (adc_samples_t *)p;
 
-    pWeather->rawWindDir = pSamples->adcWindDir;
-    pWeather->rawBatteryVolts = pSamples->adcBatteryVoltage;
-    pWeather->rawBatteryTemperature = pSamples->adcBatteryTemperature;
-    pWeather->rawChipTemperature = pSamples->adcRP2040Temperature;
+    for (i = 0;i < ADC_SAMPLE_BUFFER_SIZE;i++) {
+        sampleAvg += adcSamples[i].adcWindDir;
+    }
+    pWeather->rawWindDir = sampleAvg >> 3;
+    sampleAvg = 0;
+
+    for (i = 0;i < ADC_SAMPLE_BUFFER_SIZE;i++) {
+        sampleAvg += adcSamples[i].adcBatteryVoltage;
+    }
+    pWeather->rawBatteryVolts = sampleAvg >> 3;
+    sampleAvg = 0;
+
+    for (i = 0;i < ADC_SAMPLE_BUFFER_SIZE;i++) {
+        sampleAvg += adcSamples[i].adcBatteryTemperature;
+    }
+    pWeather->rawBatteryTemperature = sampleAvg >> 3;
+    sampleAvg = 0;
+
+    for (i = 0;i < ADC_SAMPLE_BUFFER_SIZE;i++) {
+        sampleAvg += adcSamples[i].adcRP2040Temperature;
+    }
+    pWeather->rawChipTemperature = sampleAvg >> 3;
+    sampleAvg = 0;
 }
 
 void adcInit() {
     adc_init();
+
+    /*
+    ** Clear the sample buffer...
+    */
+    memset(adcSamples, 0, sizeof(adc_samples_t) * ADC_SAMPLE_BUFFER_SIZE);
 
     adc_gpio_init(26);
     adc_gpio_init(27);

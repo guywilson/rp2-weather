@@ -1,8 +1,11 @@
 #include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
 
 #include "pico/stdlib.h"
 #include "hardware/timer.h"
 #include "hardware/irq.h"
+#include "hardware/rtc.h"
 #include "scheduler.h"
 
 #include "rtc_rp2040.h"
@@ -11,6 +14,19 @@
 #define ALARM_IRQ TIMER_IRQ_0
 
 #define RTC_INTERRUPT_CYCLE             1000U
+
+datetime_t * _fillDateTime(datetime_t * dt) {
+    dt->day         = 14;
+    dt->dotw        = 5;
+    dt->month       = 4;
+    dt->year        = 2022;
+
+    dt->hour        = 14;
+    dt->min         = 20;
+    dt->sec         = 0;
+
+    return dt;
+}
 
 void rtcDelay(uint32_t delay_us) {
     uint32_t            startTime;
@@ -28,21 +44,21 @@ static void irqTimerAlarm() {
 
 	_rtcISR();
 
-    // Enable the interrupt for our alarm (the timer outputs 4 alarm irqs)
     hw_set_bits(&timer_hw->inte, 1u << ALARM_NUM);
     timer_hw->alarm[ALARM_NUM] = (uint32_t)(timer_hw->timerawl + RTC_INTERRUPT_CYCLE);
 }
 
 void setupRTC() {
-    // Enable the interrupt for our alarm (the timer outputs 4 alarm irqs)
-    hw_set_bits(&timer_hw->inte, 1u << ALARM_NUM);
-    // Set irq handler for alarm irq
-    irq_set_exclusive_handler(TIMER_IRQ_0, irqTimerAlarm);
-    // Enable the alarm irq
-    irq_set_enabled(ALARM_IRQ, true);
-    // Enable interrupt in block and at processor
+    // datetime_t          dt;
 
-    // Write the lower 32 bits of the target time to the alarm which
-    // will arm it
+    // rtc_init();
+
+    // rtc_set_datetime(_fillDateTime(&dt));
+
+    hw_set_bits(&timer_hw->inte, 1u << ALARM_NUM);
+
+    irq_set_exclusive_handler(TIMER_IRQ_0, irqTimerAlarm);
+    irq_set_enabled(ALARM_IRQ, true);
+
     timer_hw->alarm[ALARM_NUM] = (uint32_t)(timer_hw->timerawl + RTC_INTERRUPT_CYCLE);
 }

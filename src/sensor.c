@@ -178,9 +178,6 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_SEND_BEGIN:
             nRF24L01_powerUpTx(spi0);
 
-            /*
-            ** Give the device 2ms to power up...
-            */
             delay = rtc_val_ms(150);
             state = STATE_SEND_PACKET;
             break;
@@ -190,7 +187,6 @@ void taskI2CSensor(PTASKPARM p) {
             nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
 
             delay = rtc_val_ms(125);
-
             state = STATE_SEND_FINISH;
             break;
 
@@ -198,7 +194,6 @@ void taskI2CSensor(PTASKPARM p) {
             nRF24L01_powerDown(spi0);
 
             delay = rtc_val_ms(125);
-
             state = STATE_READ_TEMP_1;
             break;
     }

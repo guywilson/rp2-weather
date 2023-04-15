@@ -11,50 +11,73 @@
 #include "scheduler.h"
 #include "taskdef.h"
 #include "sensor.h"
-#include "anemometer_pulse.pio.h"
-#include "rainfall_pulse.pio.h"
+
+#define PIO_SM_ANEMOMETER                    0
+#define PIO_SM_RAIN_GAUGE                    1
 
 #define PIO_PIN_ANEMOMETER                  18
 #define PIO_PIN_RAIN_GAUGE                  19
 
-#define PIO_0_COUNTER_RESET               2048
-#define PIO_1_COUNTER_RESET                512
+#define PIO_ANEMOMETER_OFFSET                0
+#define PIO_RAIN_GAUGE_OFFSET               16
+
+#define PIO_COUNTER_RESET_ANEMOMETER      2048
+#define PIO_COUNTER_RESET_RAIN_GAUGE       512
+
+static uint16_t         averageBuffer[16];
 
 void pioInit() {
-    uint            anemometerOffset;
-    uint            rainGaugeOffset;
+    uint            anemometerOffset = PIO_ANEMOMETER_OFFSET;
+    uint            rainGaugeOffset = PIO_RAIN_GAUGE_OFFSET;
 
-    anemometerOffset = pio_add_program(pio0, &anemometer_pulse_program);
-    pio_sm_config anemometerConfig = anemometer_pulse_program_get_default_config(anemometerOffset);
+    gpio_set_function(PIO_PIN_ANEMOMETER, GPIO_FUNC_PIO0);
+    gpio_set_dir(PIO_PIN_ANEMOMETER, GPIO_IN);
+    gpio_pull_up(PIO_PIN_ANEMOMETER);
 
-    rainGaugeOffset = pio_add_program(pio1, &rainfall_pulse_program);
-    pio_sm_config rainGaugeConfig = rainfall_pulse_program_get_default_config(rainGaugeOffset);
+    gpio_set_function(PIO_PIN_RAIN_GAUGE, GPIO_FUNC_PIO0);
+    gpio_set_dir(PIO_PIN_RAIN_GAUGE, GPIO_IN);
+    gpio_pull_up(PIO_PIN_RAIN_GAUGE);
+
+    /*
+    ** Load the program:
+    **
+    ** .wrap_target
+    **     set x, <reset_value>
+    ** loop:
+    **     wait 1 pin <pin>
+    **     wait 0 pin <pin>
+    **     jmp X-- loop
+    ** .wrap
+    */
+    pio0->instr_mem[anemometerOffset]       = pio_encode_set(pio_x, PIO_COUNTER_RESET_ANEMOMETER);
+    pio0->instr_mem[anemometerOffset + 1]   = pio_encode_wait_pin(true, PIO_PIN_ANEMOMETER);
+    pio0->instr_mem[anemometerOffset + 2]   = pio_encode_wait_pin(false, PIO_PIN_ANEMOMETER);
+    pio0->instr_mem[anemometerOffset + 3]   = pio_encode_jmp_x_dec(anemometerOffset + 1);
+
+    pio_sm_config anemometerConfig = pio_get_default_sm_config();
+    sm_config_set_wrap(&anemometerConfig, anemometerOffset, anemometerOffset + 3);
+
+    pio0->instr_mem[rainGaugeOffset]        = pio_encode_set(pio_x, PIO_COUNTER_RESET_RAIN_GAUGE);
+    pio0->instr_mem[rainGaugeOffset + 1]    = pio_encode_wait_pin(true, PIO_PIN_RAIN_GAUGE);
+    pio0->instr_mem[rainGaugeOffset + 2]    = pio_encode_wait_pin(false, PIO_PIN_RAIN_GAUGE);
+    pio0->instr_mem[rainGaugeOffset + 3]    = pio_encode_jmp_x_dec(rainGaugeOffset + 1);
+
+    pio_sm_config rainGaugeConfig = pio_get_default_sm_config();
+    sm_config_set_wrap(&rainGaugeConfig, rainGaugeOffset, rainGaugeOffset + 3);
+
+    pio_sm_clear_fifos(pio0, PIO_SM_ANEMOMETER);
+    pio_sm_clear_fifos(pio0, PIO_SM_RAIN_GAUGE);
 
     sm_config_set_in_pins(&anemometerConfig, PIO_PIN_ANEMOMETER);
     sm_config_set_in_pins(&rainGaugeConfig, PIO_PIN_RAIN_GAUGE);
 
     pio_set_irq0_source_enabled(pio0, pis_interrupt0, false);
-    pio_set_irq1_source_enabled(pio1, pis_interrupt1, false);
-    
-    /*
-    ** Initialise X...
-    */
-    pio_sm_put(pio0, 0, PIO_0_COUNTER_RESET);
-    pio_sm_exec(pio0, 0, pio_encode_pull(false, false));
-    pio_sm_exec(pio0, 0, pio_encode_mov(pio_x, pio_osr));
-    
-    /*
-    ** Initialise X...
-    */
-    pio_sm_put(pio1, 0, PIO_1_COUNTER_RESET);
-    pio_sm_exec(pio1, 0, pio_encode_pull(false, false));
-    pio_sm_exec(pio1, 0, pio_encode_mov(pio_x, pio_osr));
 
-    pio_sm_init(pio0, 0, anemometerOffset, &anemometerConfig);
-    pio_sm_set_enabled(pio0, 0, true);
+    pio_sm_init(pio0, PIO_SM_ANEMOMETER, anemometerOffset, &anemometerConfig);
+    pio_sm_set_enabled(pio0, PIO_SM_ANEMOMETER, true);
 
-    pio_sm_init(pio1, 0, rainGaugeOffset, &rainGaugeConfig);
-    pio_sm_set_enabled(pio1, 0, true);
+    pio_sm_init(pio0, PIO_SM_RAIN_GAUGE, rainGaugeOffset, &rainGaugeConfig);
+    pio_sm_set_enabled(pio0, PIO_SM_RAIN_GAUGE, true);
 }
 
 /*
@@ -64,7 +87,6 @@ void pioInit() {
 ** our anemometer, we can work out our wind speed.
 */
 void taskAnemometer(PTASKPARM p) {
-    static uint16_t     averageBuffer[16];
     static int          ix = 0;
     int                 i;
     uint16_t            pulseCount = 0;
@@ -74,17 +96,17 @@ void taskAnemometer(PTASKPARM p) {
     /*
     ** Get the pulse count...
     */
-    pio_sm_exec(pio0, 0, pio_encode_mov(pio_isr, pio_x));
-    pio_sm_exec(pio0, 0, pio_encode_push(false, false));
+    pio_sm_exec(pio0, PIO_SM_ANEMOMETER, pio_encode_mov(pio_isr, pio_x));
+    pio_sm_exec(pio0, PIO_SM_ANEMOMETER, pio_encode_push(false, false));
 
-    pulseCount = PIO_0_COUNTER_RESET - (uint16_t)pio_sm_get(pio0, 0);
+    pulseCount = PIO_COUNTER_RESET_ANEMOMETER - (uint16_t)pio_sm_get(pio0, PIO_SM_ANEMOMETER);
     
     /*
     ** Reset X...
     */
-    pio_sm_put(pio0, 0, PIO_0_COUNTER_RESET);
-    pio_sm_exec(pio0, 0, pio_encode_pull(false, false));
-    pio_sm_exec(pio0, 0, pio_encode_mov(pio_x, pio_osr));
+    pio_sm_put(pio0, PIO_SM_ANEMOMETER, PIO_COUNTER_RESET_ANEMOMETER);
+    pio_sm_exec(pio0, PIO_SM_ANEMOMETER, pio_encode_pull(false, false));
+    pio_sm_exec(pio0, PIO_SM_ANEMOMETER, pio_encode_mov(pio_x, pio_osr));
 
     /*
     ** As this task runs once per second, this equates to pulses/sec...
@@ -124,17 +146,17 @@ void taskRainGuage(PTASKPARM p) {
     /*
     ** Get the pulse count...
     */
-    pio_sm_exec(pio1, 0, pio_encode_mov(pio_isr, pio_x));
-    pio_sm_exec(pio1, 0, pio_encode_push(false, false));
+    pio_sm_exec(pio0, PIO_SM_RAIN_GAUGE, pio_encode_mov(pio_isr, pio_x));
+    pio_sm_exec(pio0, PIO_SM_RAIN_GAUGE, pio_encode_push(false, false));
 
-    pulseCount = PIO_1_COUNTER_RESET - (uint16_t)pio_sm_get(pio1, 0);
+    pulseCount = PIO_COUNTER_RESET_RAIN_GAUGE - (uint16_t)pio_sm_get(pio0, PIO_SM_RAIN_GAUGE);
     
     /*
     ** Reset X...
     */
-    pio_sm_put(pio1, 0, PIO_0_COUNTER_RESET);
-    pio_sm_exec(pio1, 0, pio_encode_pull(false, false));
-    pio_sm_exec(pio1, 0, pio_encode_mov(pio_x, pio_osr));
+    pio_sm_put(pio0, PIO_SM_RAIN_GAUGE, PIO_COUNTER_RESET_RAIN_GAUGE);
+    pio_sm_exec(pio0, PIO_SM_RAIN_GAUGE, pio_encode_pull(false, false));
+    pio_sm_exec(pio0, PIO_SM_RAIN_GAUGE, pio_encode_mov(pio_x, pio_osr));
 
     /*
     ** As this task runs once per hour, this equates to pulses/hour...

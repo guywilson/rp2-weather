@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #include "scheduler.h"
 #include "schederr.h"
@@ -20,6 +22,7 @@
 #include "pio_rp2040.h"
 #include "pwm_rp2040.h"
 #include "heartbeat.h"
+#include "battery.h"
 #include "watchdog.h"
 #include "logger.h"
 #include "sensor.h"
@@ -31,6 +34,25 @@
 #define I2C_SLK_ALT_PIN				17
 
 #define SPI0_CSEL_PIN				22
+#define PWM_PIN                     20
+
+void taskPWM(PTASKPARM p) {
+    static int          state = 0;
+    rtc_t               delay;
+
+    if (state) {
+        gpio_put(PWM_PIN, false);
+        state = 0;
+        delay = rtc_val_ms(90);
+    }
+    else {
+        gpio_put(PWM_PIN, true);
+        state = 1;
+        delay = rtc_val_ms(10);
+    }
+
+    scheduleTask(TASK_PWM, delay, false, NULL);
+}
 
 void setup(void) {
     uint16_t *          otp;
@@ -49,6 +71,9 @@ void setup(void) {
 
     gpio_set_function(I2C_SDA_ALT_PIN, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SLK_ALT_PIN, GPIO_FUNC_I2C);
+    
+    gpio_init(PWM_PIN);
+    gpio_set_dir(PWM_PIN, GPIO_OUT);
 
     lgOpen(uart0, LOG_LEVEL_FATAL | LOG_LEVEL_ERROR | LOG_LEVEL_STATUS);
 
@@ -59,11 +84,6 @@ void setup(void) {
 
     adcInit();
     pioInit();
-
-    /*
-    ** Use the PWM to mimic pulses from an anemometer...
-    */
-    pwmInit();
 
     otp = getOTPValues();
 
@@ -83,7 +103,7 @@ int main(void) {
 		turnOff(LED_ONBOARD);
 	}
 
-	initScheduler(8);
+	initScheduler(9);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &WatchdogTask);
@@ -93,6 +113,17 @@ int main(void) {
     registerTask(TASK_ADC, &taskADC);
     registerTask(TASK_ANEMOMETER, &taskAnemometer);
     registerTask(TASK_RAIN_GAUGE, &taskRainGuage);
+//    registerTask(TASK_BATTERY_MONITOR, &taskBatteryMonitor);
+    registerTask(TASK_PWM, &taskPWM);
+
+    /*
+    ** Use the GPIO to mimic pulses from the anemometer...
+    */
+    scheduleTask(
+            TASK_PWM, 
+            rtc_val_ms(40), 
+            false, 
+            NULL);
 
 	scheduleTask(
 			TASK_HEARTBEAT,
@@ -120,6 +151,12 @@ int main(void) {
             rtc_val_hr(1),
             true,
             NULL);
+
+    // scheduleTask(
+    //         TASK_BATTERY_MONITOR,
+    //         rtc_val_sec(10),
+    //         true,
+    //         NULL);
 
 	scheduleTask(
 			TASK_WATCHDOG, 

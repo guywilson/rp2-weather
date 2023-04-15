@@ -45,6 +45,7 @@ if (PICO_ON_DEVICE)
             src/veml7700.c
             src/nRF24L01.c
             src/heartbeat.c
+            src/battery.c
             src/debug.c
             src/utils.c
             src/watchdog.c)
@@ -61,7 +62,8 @@ if (PICO_ON_DEVICE)
             hardware_uart
             hardware_pio
             hardware_adc
-            hardware_pwm)
+            hardware_pwm
+            hardware_rtc)
 
     # create map/bin/hex file etc.
     pico_add_extra_outputs(rp2-weather)
