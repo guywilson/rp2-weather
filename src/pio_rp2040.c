@@ -25,10 +25,8 @@
 #define PIO_ANEMOMETER_OFFSET                0
 #define PIO_RAIN_GAUGE_OFFSET               16
 
-#define PIO_COUNTER_RESET_ANEMOMETER      2048
-#define PIO_COUNTER_RESET_RAIN_GAUGE       512
-
 #define PIO_ANEMOMETER_TASK_RUNS_PER_SEC    10
+#define PIO_RAIN_GAUGE_TASK_RUNS_PER_HOUR   18
 
 static uint32_t         averageBuffer[16];
 static uint             anemometerSM;
@@ -84,6 +82,12 @@ void taskAnemometer(PTASKPARM p) {
     while (!pio_sm_is_rx_fifo_empty(pio0, anemometerSM)) {
         pioValue = pio_sm_get(pio0, anemometerSM);
 
+        /*
+        ** Pulses are bitshifted into the RX_FIFO by the PIO.
+        ** The PIO is setup to auto-push 2 bits into the FIFO
+        ** so two pulses will be encoded as 0b00000011 = 3,
+        ** adjust that here...
+        */
         if (pioValue & 0x03) {
             pioValue = 2;
         }
@@ -121,37 +125,39 @@ void taskAnemometer(PTASKPARM p) {
     }
 }
 
-/*
-** We measure rainfall in mm/h. This task runs
-** once per hour, so adding up the number of pulses
-** in the last hour, and knowing the volume of
-** our tipping bucket, we can work out our rainfall.
-*/
 void taskRainGuage(PTASKPARM p) {
-    uint16_t            pulseCount;
+    static int          runCount = 0;
+    static uint32_t     pulseCount = 0;
+    uint32_t            pioValue;
     weather_packet_t *  pWeather;
 
-    pWeather = getWeatherPacket();
+    while (!pio_sm_is_rx_fifo_empty(pio0, rainGaugeSM)) {
+        pioValue = pio_sm_get(pio0, rainGaugeSM);
 
-    /*
-    ** Get the pulse count...
-    */
-    pio_sm_exec(pio0, PIO_SM_RAIN_GAUGE, pio_encode_mov(pio_isr, pio_x));
-    pio_sm_exec(pio0, PIO_SM_RAIN_GAUGE, pio_encode_push(false, false));
+        /*
+        ** Pulses are bitshifted into the RX_FIFO by the PIO.
+        ** The PIO is setup to auto-push 2 bits into the FIFO
+        ** so two pulses will be encoded as 0b00000011 = 3,
+        ** adjust that here...
+        */
+        if (pioValue & 0x03) {
+            pioValue = 2;
+        }
 
-    pulseCount = PIO_COUNTER_RESET_RAIN_GAUGE - (uint16_t)pio_sm_get(pio0, PIO_SM_RAIN_GAUGE);
+        pulseCount += pioValue;
+    }
     
-    /*
-    ** Reset X...
-    */
-    pio_sm_put(pio0, PIO_SM_RAIN_GAUGE, PIO_COUNTER_RESET_RAIN_GAUGE);
-    pio_sm_exec(pio0, PIO_SM_RAIN_GAUGE, pio_encode_pull(false, false));
-    pio_sm_exec(pio0, PIO_SM_RAIN_GAUGE, pio_encode_mov(pio_x, pio_osr));
+    runCount++;
 
-    /*
-    ** As this task runs once per hour, this equates to pulses/hour...
-    */
-    pWeather->rawRainfall = pulseCount;
+    if (runCount == PIO_RAIN_GAUGE_TASK_RUNS_PER_HOUR) {
+        /*
+        ** Our pulse count equates to pulses/hour...
+        */
+        pWeather->rawRainfall = pulseCount;
 
-    lgLogDebug("Rainfall count: %d", pWeather->rawRainfall);
+        lgLogDebug("Rainfall count: %d", pWeather->rawRainfall);
+
+        runCount = 0;
+        pulseCount = 0;
+    }
 }
