@@ -10,7 +10,7 @@ start:
     set X, 1
 
 .wrap_target
-    ; Wait for a rising edge on the clock input
+    ; Wait for a rising edge on the input
     wait 0 pin 0
     wait 1 pin 0
 
