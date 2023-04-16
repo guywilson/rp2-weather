@@ -14,6 +14,8 @@
 
 #include "pulsecount.pio.h"
 
+#define PULSE_COUNT_BIT_SHIFT                2
+
 #define PIO_SM_ANEMOMETER                    0
 #define PIO_SM_RAIN_GAUGE                    1
 
@@ -51,14 +53,14 @@ void pioInit() {
     sm_config_set_jmp_pin(&anemometerConfig, PIO_PIN_ANEMOMETER);
     sm_config_set_jmp_pin(&rainGaugeConfig, PIO_PIN_RAIN_GAUGE);
 
-    pio_sm_set_consecutive_pindirs(pio0, anemometerSM, PIO_PIN_ANEMOMETER, 2, false);
-    pio_sm_set_consecutive_pindirs(pio0, rainGaugeSM, PIO_PIN_RAIN_GAUGE, 2, false);
+    pio_sm_set_consecutive_pindirs(pio0, anemometerSM, PIO_PIN_ANEMOMETER, 1, false);
+    pio_sm_set_consecutive_pindirs(pio0, rainGaugeSM, PIO_PIN_RAIN_GAUGE, 1, false);
 
     pio_gpio_init(pio0, PIO_PIN_ANEMOMETER);
     pio_gpio_init(pio0, PIO_PIN_RAIN_GAUGE);
 
-    sm_config_set_in_shift(&anemometerConfig, true, true, PULSE_COUNT_BIT_SHIFT);
-    sm_config_set_in_shift(&rainGaugeConfig, true, true, PULSE_COUNT_BIT_SHIFT);
+    sm_config_set_in_shift(&anemometerConfig, false, true, PULSE_COUNT_BIT_SHIFT);
+    sm_config_set_in_shift(&rainGaugeConfig, false, true, PULSE_COUNT_BIT_SHIFT);
 
     sm_config_set_fifo_join(&anemometerConfig, PIO_FIFO_JOIN_RX);
     sm_config_set_fifo_join(&rainGaugeConfig, PIO_FIFO_JOIN_RX);
@@ -74,21 +76,19 @@ void taskAnemometer(PTASKPARM p) {
     static int          ix = 0;
     static int          runCount = 0;
     static uint32_t     pulseCount = 0;
+    uint32_t            pioValue;
     int                 i;
-    int                 bitShift = 0;
     uint32_t            totalCount = 0;
     weather_packet_t *  pWeather;
 
     while (!pio_sm_is_rx_fifo_empty(pio0, anemometerSM)) {
-        pulseCount += pio_sm_get(pio0, anemometerSM) >> bitShift;
-        bitShift += PULSE_COUNT_BIT_SHIFT;
+        pioValue = pio_sm_get(pio0, anemometerSM);
 
-        /*
-        ** Shift out max 32 bits
-        */
-        if (bitShift > 32) {
-            break;
+        if (pioValue & 0x03) {
+            pioValue = 2;
         }
+
+        pulseCount += pioValue;
     }
     
     runCount++;

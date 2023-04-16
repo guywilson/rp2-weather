@@ -43,12 +43,12 @@ void taskPWM(PTASKPARM p) {
     if (state) {
         gpio_put(PWM_PIN, false);
         state = 0;
-        delay = rtc_val_ms(90);
+        delay = rtc_val_ms(49);
     }
     else {
         gpio_put(PWM_PIN, true);
         state = 1;
-        delay = rtc_val_ms(10);
+        delay = rtc_val_ms(1);
     }
 
     scheduleTask(TASK_PWM, delay, false, NULL);
@@ -83,7 +83,6 @@ void setup(void) {
 	}
 
     adcInit();
-    pwmInit();
     pioInit();
 
     otp = getOTPValues();
@@ -117,15 +116,6 @@ int main(void) {
 //    registerTask(TASK_BATTERY_MONITOR, &taskBatteryMonitor);
     registerTask(TASK_PWM, &taskPWM);
 
-    /*
-    ** Use the GPIO to mimic pulses from the anemometer...
-    */
-    scheduleTask(
-            TASK_PWM, 
-            rtc_val_ms(40), 
-            false, 
-            NULL);
-
 	scheduleTask(
 			TASK_HEARTBEAT,
 			rtc_val_ms(950),
@@ -143,7 +133,7 @@ int main(void) {
 
     scheduleTask(
             TASK_ANEMOMETER,
-            rtc_val_ms(10),
+            rtc_val_ms(100),
             true,
             NULL);
 
@@ -164,6 +154,15 @@ int main(void) {
 			rtc_val_ms(50), 
             true, 
 			NULL);
+
+    /*
+    ** Use the GPIO to mimic pulses from the anemometer...
+    */
+    scheduleTask(
+            TASK_PWM, 
+            rtc_val_ms(45), 
+            false, 
+            NULL);
 
 	/*
 	** Enable the watchdog, it will reset the device in 100ms unless

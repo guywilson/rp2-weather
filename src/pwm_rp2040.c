@@ -15,10 +15,10 @@ void pwmInit() {
     slice = pwm_gpio_to_slice_num(PWM_ANEMOMETER_CLOCK_PIN);
 
     /*
-    ** Create a PWM clock with a 50% duty cycle @ 400Hz... 
+    ** Create a PWM clock with a 50% duty cycle @ 800Hz... 
     */
     pwm_set_clkdiv(slice, 256.0);
-    pwm_set_wrap(slice, 1220);
+    pwm_set_wrap(slice, 610);
     pwm_set_chan_level(slice, PWM_CHAN_A, 610);
     pwm_set_chan_level(slice, PWM_CHAN_B, 610);
     

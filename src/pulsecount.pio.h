@@ -8,33 +8,26 @@
 #include "hardware/pio.h"
 #endif
 
-#define MIN_PULSE_COUNT 3
-#define PULSE_COUNT_BIT_SHIFT 2
-
 // ---------- //
 // pulsecount //
 // ---------- //
 
 #define pulsecount_wrap_target 1
-#define pulsecount_wrap 7
+#define pulsecount_wrap 3
 
 static const uint16_t pulsecount_program_instructions[] = {
-    0xe023, //  0: set    x, 3                       
+    0xe021, //  0: set    x, 1                       
             //     .wrap_target
-    0x2021, //  1: wait   0 pin, 1                   
-    0x20a1, //  2: wait   1 pin, 1                   
-    0x00c5, //  3: jmp    pin, 5                     
-    0x0001, //  4: jmp    1                          
-    0x0041, //  5: jmp    x--, 1                     
-    0xe023, //  6: set    x, 3                       
-    0x4022, //  7: in     x, 2                       
+    0x2020, //  1: wait   0 pin, 0                   
+    0x20a0, //  2: wait   1 pin, 0                   
+    0x4021, //  3: in     x, 1                       
             //     .wrap
 };
 
 #if !PICO_NO_HARDWARE
 static const struct pio_program pulsecount_program = {
     .instructions = pulsecount_program_instructions,
-    .length = 8,
+    .length = 4,
     .origin = -1,
 };
 
