@@ -255,9 +255,9 @@ int nRF24L01_setup(spi_inst_t * spi) {
     nRF24L01_writeRegister(
                     spi, 
                     NRF24L01_REG_RF_SETUP, 
-                    NRF24L01_RF_SETUP_RF_POWER_LOW | 
+                    NRF24L01_RF_SETUP_RF_POWER_HIGH | 
                     NRF24L01_RF_SETUP_RF_LNA_GAIN_OFF | 
-                    NRF24L01_RF_SETUP_DATA_RATE_1MBPS, 
+                    NRF24L01_RF_SETUP_DATA_RATE_2MBPS, 
                     &statusReg);
 
     nRF24L01_writeRegister(

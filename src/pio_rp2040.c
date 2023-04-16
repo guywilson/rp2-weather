@@ -12,11 +12,13 @@
 #include "taskdef.h"
 #include "sensor.h"
 
+#include "pulsecount.pio.h"
+
 #define PIO_SM_ANEMOMETER                    0
 #define PIO_SM_RAIN_GAUGE                    1
 
 #define PIO_PIN_ANEMOMETER                  18
-#define PIO_PIN_RAIN_GAUGE                  19
+#define PIO_PIN_RAIN_GAUGE                  12
 
 #define PIO_ANEMOMETER_OFFSET                0
 #define PIO_RAIN_GAUGE_OFFSET               16
@@ -24,108 +26,98 @@
 #define PIO_COUNTER_RESET_ANEMOMETER      2048
 #define PIO_COUNTER_RESET_RAIN_GAUGE       512
 
-static uint16_t         averageBuffer[16];
+#define PIO_ANEMOMETER_TASK_RUNS_PER_SEC    10
+
+static uint32_t         averageBuffer[16];
+static uint             anemometerSM;
+static uint             rainGaugeSM;
 
 void pioInit() {
     uint            anemometerOffset = PIO_ANEMOMETER_OFFSET;
     uint            rainGaugeOffset = PIO_RAIN_GAUGE_OFFSET;
 
-    gpio_set_function(PIO_PIN_ANEMOMETER, GPIO_FUNC_PIO0);
-    gpio_set_dir(PIO_PIN_ANEMOMETER, GPIO_IN);
-    gpio_pull_up(PIO_PIN_ANEMOMETER);
+    pio_add_program_at_offset(pio0, &pulsecount_program, anemometerOffset);
+    pio_add_program_at_offset(pio0, &pulsecount_program, rainGaugeOffset);
 
-    gpio_set_function(PIO_PIN_RAIN_GAUGE, GPIO_FUNC_PIO0);
-    gpio_set_dir(PIO_PIN_RAIN_GAUGE, GPIO_IN);
-    gpio_pull_up(PIO_PIN_RAIN_GAUGE);
+    anemometerSM = pio_claim_unused_sm(pio0, true);
+    rainGaugeSM = pio_claim_unused_sm(pio0, true);
 
-    /*
-    ** Load the program:
-    **
-    ** .wrap_target
-    **     set x, <reset_value>
-    ** loop:
-    **     wait 1 pin <pin>
-    **     wait 0 pin <pin>
-    **     jmp X-- loop
-    ** .wrap
-    */
-    pio0->instr_mem[anemometerOffset]       = pio_encode_set(pio_x, 0);
-    pio0->instr_mem[anemometerOffset + 1]   = pio_encode_wait_pin(false, PIO_PIN_ANEMOMETER);
-    pio0->instr_mem[anemometerOffset + 2]   = pio_encode_wait_pin(true, PIO_PIN_ANEMOMETER);
-    pio0->instr_mem[anemometerOffset + 3]   = pio_encode_jmp_x_dec(anemometerOffset + 1);
-
-    pio_sm_config anemometerConfig = pio_get_default_sm_config();
-    sm_config_set_wrap(&anemometerConfig, anemometerOffset, anemometerOffset + 3);
-
-    pio0->instr_mem[rainGaugeOffset]        = pio_encode_set(pio_x, 0);
-    pio0->instr_mem[rainGaugeOffset + 1]    = pio_encode_wait_pin(false, PIO_PIN_RAIN_GAUGE);
-    pio0->instr_mem[rainGaugeOffset + 2]    = pio_encode_wait_pin(true, PIO_PIN_RAIN_GAUGE);
-    pio0->instr_mem[rainGaugeOffset + 3]    = pio_encode_jmp_x_dec(rainGaugeOffset + 1);
-
-    pio_sm_config rainGaugeConfig = pio_get_default_sm_config();
-    sm_config_set_wrap(&rainGaugeConfig, rainGaugeOffset, rainGaugeOffset + 3);
-
-    pio_sm_clear_fifos(pio0, PIO_SM_ANEMOMETER);
-    pio_sm_clear_fifos(pio0, PIO_SM_RAIN_GAUGE);
+    pio_sm_config anemometerConfig = pulsecount_program_get_default_config(anemometerOffset);
+    pio_sm_config rainGaugeConfig = pulsecount_program_get_default_config(rainGaugeOffset);
 
     sm_config_set_in_pins(&anemometerConfig, PIO_PIN_ANEMOMETER);
     sm_config_set_in_pins(&rainGaugeConfig, PIO_PIN_RAIN_GAUGE);
 
-    pio_set_irq0_source_enabled(pio0, pis_interrupt0, false);
+    sm_config_set_jmp_pin(&anemometerConfig, PIO_PIN_ANEMOMETER);
+    sm_config_set_jmp_pin(&rainGaugeConfig, PIO_PIN_RAIN_GAUGE);
 
-    pio_sm_init(pio0, PIO_SM_ANEMOMETER, anemometerOffset, &anemometerConfig);
-    pio_sm_set_enabled(pio0, PIO_SM_ANEMOMETER, true);
+    pio_sm_set_consecutive_pindirs(pio0, anemometerSM, PIO_PIN_ANEMOMETER, 2, false);
+    pio_sm_set_consecutive_pindirs(pio0, rainGaugeSM, PIO_PIN_RAIN_GAUGE, 2, false);
 
-    pio_sm_init(pio0, PIO_SM_RAIN_GAUGE, rainGaugeOffset, &rainGaugeConfig);
-    pio_sm_set_enabled(pio0, PIO_SM_RAIN_GAUGE, true);
+    pio_gpio_init(pio0, PIO_PIN_ANEMOMETER);
+    pio_gpio_init(pio0, PIO_PIN_RAIN_GAUGE);
+
+    sm_config_set_in_shift(&anemometerConfig, true, true, PULSE_COUNT_BIT_SHIFT);
+    sm_config_set_in_shift(&rainGaugeConfig, true, true, PULSE_COUNT_BIT_SHIFT);
+
+    sm_config_set_fifo_join(&anemometerConfig, PIO_FIFO_JOIN_RX);
+    sm_config_set_fifo_join(&rainGaugeConfig, PIO_FIFO_JOIN_RX);
+
+    pio_sm_init(pio0, anemometerSM, anemometerOffset, &anemometerConfig);
+    pio_sm_set_enabled(pio0, anemometerSM, true);
+
+    pio_sm_init(pio0, rainGaugeSM, rainGaugeOffset, &rainGaugeConfig);
+    pio_sm_set_enabled(pio0, rainGaugeSM, true);
 }
 
-/*
-** We measure wind speed in m/s. This task runs
-** once per second, so adding up the number of pulses
-** in the last second, and knowing the diameter of
-** our anemometer, we can work out our wind speed.
-*/
 void taskAnemometer(PTASKPARM p) {
     static int          ix = 0;
+    static int          runCount = 0;
+    static uint32_t     pulseCount = 0;
     int                 i;
-    uint16_t            pulseCount = 0;
-    uint16_t            totalCount = 0;
+    int                 bitShift = 0;
+    uint32_t            totalCount = 0;
     weather_packet_t *  pWeather;
 
-    /*
-    ** Get the pulse count...
-    */
-    pio_sm_exec(pio0, PIO_SM_ANEMOMETER, pio_encode_mov(pio_isr, pio_x));
-    pio_sm_exec(pio0, PIO_SM_ANEMOMETER, pio_encode_push(false, false));
-
-    pulseCount = (uint16_t)(-(int32_t)pio_sm_get(pio0, PIO_SM_ANEMOMETER));
-    
-    /*
-    ** Reset X...
-    */
-    pio_sm_restart(pio0, PIO_SM_ANEMOMETER);
-
-    /*
-    ** As this task runs once per second, this equates to pulses/sec...
-    */
-    averageBuffer[ix++] = pulseCount;
-
-    if (ix == 16) {
-        for (i = 0;i < 16;i++) {
-            totalCount += averageBuffer[i];
-        }
-
-        pWeather = getWeatherPacket();
+    while (!pio_sm_is_rx_fifo_empty(pio0, anemometerSM)) {
+        pulseCount += pio_sm_get(pio0, anemometerSM) >> bitShift;
+        bitShift += PULSE_COUNT_BIT_SHIFT;
 
         /*
-        ** Get the average windspeed over 16 measurements (16 seconds)...
+        ** Shift out max 32 bits
         */
-        pWeather->rawWindspeed = totalCount >> 4;
+        if (bitShift > 32) {
+            break;
+        }
+    }
+    
+    runCount++;
 
-        lgLogDebug("Avg windspeed count: %d", pWeather->rawWindspeed);
+    if (runCount == PIO_ANEMOMETER_TASK_RUNS_PER_SEC) {
+        /*
+        ** Our pulse count equates to pulses/sec...
+        */
+        averageBuffer[ix++] = pulseCount;
 
-        ix = 0;
+        if (ix == 16) {
+            for (i = 0;i < 16;i++) {
+                totalCount += averageBuffer[i];
+            }
+
+            pWeather = getWeatherPacket();
+
+            /*
+            ** Get the average windspeed over 16 measurements (16 seconds)...
+            */
+            pWeather->rawWindspeed = (uint16_t)(totalCount >> 4);
+
+            lgLogDebug("Avg windspeed count: %d", pWeather->rawWindspeed);
+
+            ix = 0;
+        }
+
+        runCount = 0;
+        pulseCount = 0;
     }
 }
 

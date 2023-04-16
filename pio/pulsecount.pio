@@ -1,0 +1,37 @@
+; PIO pulse counter implementation
+; --------------------------------
+;
+; INput pin at pin offset 0 is our data pin
+; INput pin at pin offset 1 is our clock pin
+; Our jmp pin is set to the data pin
+;
+; The minimum count value is 3, for our anemometer this equates
+; to a wind speed resolution of approx 2.2mph
+; 
+.define PUBLIC MIN_PULSE_COUNT         3
+.define PUBLIC PULSE_COUNT_BIT_SHIFT   2
+
+.program pulsecount
+
+start:
+    set X, MIN_PULSE_COUNT
+
+.wrap_target
+loop:
+    ; Wait for a rising edge on the clock input
+    wait 0 pin 1
+    wait 1 pin 1
+
+    ; Jump if we detect a '1' on our jmp pin (data pin)
+    jmp pin pulse_detect
+    jmp loop
+
+pulse_detect:
+    jmp X-- loop
+
+    ; Reset X
+    set X, MIN_PULSE_COUNT
+
+    ; Shift 3 bits into the ISR (enough to cover our count value of 7)
+    in X, PULSE_COUNT_BIT_SHIFT
+.wrap

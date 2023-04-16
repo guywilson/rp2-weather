@@ -34,7 +34,7 @@
 #define I2C_SLK_ALT_PIN				17
 
 #define SPI0_CSEL_PIN				22
-#define PWM_PIN                     20
+#define PWM_PIN                     15
 
 void taskPWM(PTASKPARM p) {
     static int          state = 0;
@@ -83,6 +83,7 @@ void setup(void) {
 	}
 
     adcInit();
+    pwmInit();
     pioInit();
 
     otp = getOTPValues();
@@ -142,7 +143,7 @@ int main(void) {
 
     scheduleTask(
             TASK_ANEMOMETER,
-            rtc_val_sec(1),
+            rtc_val_ms(10),
             true,
             NULL);
 
