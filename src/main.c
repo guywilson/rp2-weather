@@ -36,6 +36,7 @@
 #define SPI0_CSEL_PIN				22
 #define PWM_PIN                     15
 
+
 void taskPWM(PTASKPARM p) {
     static int          state = 0;
     rtc_t               delay;

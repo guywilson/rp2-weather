@@ -46,7 +46,6 @@ if (PICO_ON_DEVICE)
             src/nRF24L01.c
             src/heartbeat.c
             src/battery.c
-            src/debug.c
             src/utils.c
             src/watchdog.c)
 
