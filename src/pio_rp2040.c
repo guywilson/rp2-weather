@@ -74,26 +74,19 @@ void taskAnemometer(PTASKPARM p) {
     static int          ix = 0;
     static int          runCount = 0;
     static uint32_t     pulseCount = 0;
-    uint32_t            pioValue;
     int                 i;
     uint32_t            totalCount = 0;
     weather_packet_t *  pWeather;
 
-    while (!pio_sm_is_rx_fifo_empty(pio0, anemometerSM)) {
-        pioValue = pio_sm_get(pio0, anemometerSM);
-
-        /*
-        ** Pulses are bitshifted into the RX_FIFO by the PIO.
-        ** The PIO is setup to auto-push 2 bits into the FIFO
-        ** so two pulses will be encoded as 0b00000011 = 3,
-        ** adjust that here...
-        */
-        if (pioValue & 0x03) {
-            pioValue = 2;
-        }
-
-        pulseCount += pioValue;
-    }
+    /*
+    ** Pulses are bitshifted into the RX_FIFO by the PIO.
+    ** The PIO is setup to auto-push 2 bits into the FIFO
+    ** so two pulses will be encoded as 0b00000011 = 3, so
+    ** all we need to calculate the pulse count is 
+    ** the number of entries in the FIFO x the bits per entry...
+    */
+    pulseCount += (pio_sm_get_rx_fifo_level(pio0, anemometerSM) * PULSE_COUNT_BIT_SHIFT);
+    pio_sm_clear_fifos(pio0, anemometerSM);
     
     runCount++;
 
@@ -128,24 +121,17 @@ void taskAnemometer(PTASKPARM p) {
 void taskRainGuage(PTASKPARM p) {
     static int          runCount = 0;
     static uint32_t     pulseCount = 0;
-    uint32_t            pioValue;
     weather_packet_t *  pWeather;
 
-    while (!pio_sm_is_rx_fifo_empty(pio0, rainGaugeSM)) {
-        pioValue = pio_sm_get(pio0, rainGaugeSM);
-
-        /*
-        ** Pulses are bitshifted into the RX_FIFO by the PIO.
-        ** The PIO is setup to auto-push 2 bits into the FIFO
-        ** so two pulses will be encoded as 0b00000011 = 3,
-        ** adjust that here...
-        */
-        if (pioValue & 0x03) {
-            pioValue = 2;
-        }
-
-        pulseCount += pioValue;
-    }
+    /*
+    ** Pulses are bitshifted into the RX_FIFO by the PIO.
+    ** The PIO is setup to auto-push 2 bits into the FIFO
+    ** so two pulses will be encoded as 0b00000011 = 3, so
+    ** all we need to calculate the pulse count is 
+    ** the number of entries in the FIFO x the bits per entry...
+    */
+    pulseCount += (pio_sm_get_rx_fifo_level(pio0, rainGaugeSM) * PULSE_COUNT_BIT_SHIFT);
+    pio_sm_clear_fifos(pio0, rainGaugeSM);
     
     runCount++;
 
@@ -153,7 +139,7 @@ void taskRainGuage(PTASKPARM p) {
         /*
         ** Our pulse count equates to pulses/hour...
         */
-        pWeather->rawRainfall = pulseCount;
+        pWeather->rawRainfall = (uint16_t)pulseCount;
 
         lgLogDebug("Rainfall count: %d", pWeather->rawRainfall);
 
