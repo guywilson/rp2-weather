@@ -30,6 +30,7 @@
 #define PIO_RAIN_GAUGE_TASK_RUNS_PER_HOUR   60
 
 static uint32_t         averageBuffer[16];
+static uint16_t         rainPulseBuffer[60];
 static uint             anemometerSM;
 static uint             rainGaugeSM;
 
@@ -120,9 +121,9 @@ void taskAnemometer(PTASKPARM p) {
 }
 
 void taskRainGuage(PTASKPARM p) {
-    static int          runCount = 0;
-    static uint32_t     pulsesPerHour = 0;
-    uint32_t            pulseCount = 0;
+    static int          ix = 0;
+    int                 i;
+    uint16_t            pulsesPerHour = 0;
     weather_packet_t *  pWeather;
 
     pWeather = getWeatherPacket();
@@ -134,24 +135,20 @@ void taskRainGuage(PTASKPARM p) {
     ** all we need to calculate the pulse count is 
     ** the number of entries in the FIFO x the bits per entry...
     */
-    pulseCount += (pio_sm_get_rx_fifo_level(pio0, rainGaugeSM) * RAIN_GAUGE_PULSE_COUNT_BIT_SHIFT);
+    rainPulseBuffer[ix++] = 
+                (uint16_t)(pio_sm_get_rx_fifo_level(pio0, rainGaugeSM) * 
+                                        RAIN_GAUGE_PULSE_COUNT_BIT_SHIFT);
     pio_sm_clear_fifos(pio0, rainGaugeSM);
 
-    pulsesPerHour += pulseCount;
-
-    /*
-    ** Our pulse count equates to pulses/minute...
-    */
-    pWeather->rawRainfall = (uint16_t)pulseCount;
+    for (i = 0;i < PIO_RAIN_GAUGE_TASK_RUNS_PER_HOUR;i++) {
+        pulsesPerHour += rainPulseBuffer[i];
+    }
+        
+    pWeather->rawRainfall = pulsesPerHour;
+    
+    if (ix == PIO_RAIN_GAUGE_TASK_RUNS_PER_HOUR) {
+        ix = 0;
+    }
 
     lgLogDebug("Rainfall count: %d", pWeather->rawRainfall);
-    
-    runCount++;
-
-    if (runCount == PIO_RAIN_GAUGE_TASK_RUNS_PER_HOUR) {
-        pWeather->rawRainfallPerHour = pulsesPerHour;
-
-        runCount = 0;
-        pulsesPerHour = 0;
-    }
 }
