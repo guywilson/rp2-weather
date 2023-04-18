@@ -396,7 +396,7 @@ printf("Allocated %d tasks\n", taskArrayLength);
 	}
 
 #ifdef PICO_MULTICORE
-    core1TaskDescPool = &taskDescs[CORE1_TASKDESC_POOL_SIZE];
+    core1TaskDescPool = &taskDescs[taskArrayLength];
 
 	/*
 	** Initialise the 2nd core...
