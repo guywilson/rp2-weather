@@ -12,6 +12,7 @@
 #define TASK_RAIN_GAUGE         0x0900
 #define TASK_BATTERY_MONITOR    0x0A00
 
-#define TASK_PWM                0xFF00
+#define TASK_PWM_ANEMOMETER     0xFF00
+#define TASK_PWM_RAIN_GAUGE     0xFF10
 
 #endif

@@ -8,6 +8,7 @@
 
 #pragma pack(push, 1)
 typedef struct {                                    // Offset-Description
+    char                packetID;                   // Identify this as a weather packet
 
     uint32_t            chipID;                     // 0x00 - ID of the RP2040
 

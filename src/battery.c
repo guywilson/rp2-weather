@@ -29,6 +29,16 @@ void taskBatteryMonitor(PTASKPARM p) {
     ** stop everything and put the RP2040 to sleep...
     */
     if (pWeather->rawBatteryVolts < ADC_BATTERY_VOLTAGE_CRITICAL) {
+        /*
+        ** Steps we need to take:
+        **
+        ** 1. Send a final message back to the RPi base station
+        ** 2. Stop the scheduler (by stopping the RTC timer)
+        ** 3. Switch off the I2C device power
+        ** 4. Stop all clocks other than the RTC
+        ** 5. Setup the RTC and set a timer for 36 to 48 hours
+        ** 6. Go to sleep zzzzzzzz
+        */
 //        sleep_goto_sleep_until(&wakeTime, &wakeUp);
     }
 }

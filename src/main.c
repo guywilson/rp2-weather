@@ -33,26 +33,44 @@
 #define I2C_SDA_ALT_PIN				16
 #define I2C_SLK_ALT_PIN				17
 
-#define SPI0_CSEL_PIN				22
-#define PWM_PIN                     15
+#define PWM_RAIN_GAUGE_PIN          14
+#define PWM_ANEMOMETER_PIN          15
 
 
-void taskPWM(PTASKPARM p) {
+void taskPWMAnemometer(PTASKPARM p) {
     static int          state = 0;
     rtc_t               delay;
 
     if (state) {
-        gpio_put(PWM_PIN, false);
+        gpio_put(PWM_ANEMOMETER_PIN, false);
         state = 0;
         delay = rtc_val_ms(49);
     }
     else {
-        gpio_put(PWM_PIN, true);
+        gpio_put(PWM_ANEMOMETER_PIN, true);
         state = 1;
         delay = rtc_val_ms(1);
     }
 
-    scheduleTask(TASK_PWM, delay, false, NULL);
+    scheduleTask(TASK_PWM_ANEMOMETER, delay, false, NULL);
+}
+
+void taskPWMRainGauge(PTASKPARM p) {
+    static int          state = 0;
+    rtc_t               delay;
+
+    if (state) {
+        gpio_put(PWM_RAIN_GAUGE_PIN, false);
+        state = 0;
+        delay = rtc_val_ms(179990);
+    }
+    else {
+        gpio_put(PWM_RAIN_GAUGE_PIN, true);
+        state = 1;
+        delay = rtc_val_ms(10);
+    }
+
+    scheduleTask(TASK_PWM_RAIN_GAUGE, delay, false, NULL);
 }
 
 void setup(void) {
@@ -73,8 +91,11 @@ void setup(void) {
     gpio_set_function(I2C_SDA_ALT_PIN, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SLK_ALT_PIN, GPIO_FUNC_I2C);
     
-    gpio_init(PWM_PIN);
-    gpio_set_dir(PWM_PIN, GPIO_OUT);
+    gpio_init(PWM_ANEMOMETER_PIN);
+    gpio_set_dir(PWM_ANEMOMETER_PIN, GPIO_OUT);
+    
+    gpio_init(PWM_RAIN_GAUGE_PIN);
+    gpio_set_dir(PWM_RAIN_GAUGE_PIN, GPIO_OUT);
 
     lgOpen(uart0, LOG_LEVEL_FATAL | LOG_LEVEL_ERROR | LOG_LEVEL_STATUS);
 
@@ -104,7 +125,7 @@ int main(void) {
 		turnOff(LED_ONBOARD);
 	}
 
-	initScheduler(9);
+	initScheduler(10);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &WatchdogTask);
@@ -115,7 +136,8 @@ int main(void) {
     registerTask(TASK_ANEMOMETER, &taskAnemometer);
     registerTask(TASK_RAIN_GAUGE, &taskRainGuage);
 //    registerTask(TASK_BATTERY_MONITOR, &taskBatteryMonitor);
-    registerTask(TASK_PWM, &taskPWM);
+    registerTask(TASK_PWM_ANEMOMETER, &taskPWMAnemometer);
+    registerTask(TASK_PWM_RAIN_GAUGE, &taskPWMRainGauge);
 
 	scheduleTask(
 			TASK_HEARTBEAT,
@@ -157,11 +179,17 @@ int main(void) {
 			NULL);
 
     /*
-    ** Use the GPIO to mimic pulses from the anemometer...
+    ** Use the GPIO to mimic pulses from the anemometer
+    ** and rain gauge...
     */
     scheduleTask(
-            TASK_PWM, 
+            TASK_PWM_ANEMOMETER, 
             rtc_val_ms(45), 
+            false, 
+            NULL);
+    scheduleTask(
+            TASK_PWM_RAIN_GAUGE, 
+            rtc_val_ms(179990), 
             false, 
             NULL);
 

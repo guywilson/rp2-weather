@@ -35,21 +35,27 @@
 #define STATE_SEND_FINISH           0x0701
 #define STATE_SEND_PACKET           0x07FF
 
-weather_packet_t            weather;
 static uint8_t              buffer[32];
 
 weather_packet_t * getWeatherPacket() {
+    static weather_packet_t     weather;
+
+    weather.packetID = 'W';
+    
     return &weather;
 }
 
 int initSensors(i2c_inst_t * i2c) {
-    weather.chipID = * ((io_ro_32 *)(SYSINFO_BASE + SYSINFO_CHIP_ID_OFFSET));
+    weather_packet_t *      pWeather = getWeatherPacket();
+
+    pWeather->chipID = * ((io_ro_32 *)(SYSINFO_BASE + SYSINFO_CHIP_ID_OFFSET));
 
     return tmp117_setup(i2c) | sht4x_setup(i2c) | icp10125_setup(i2c) | veml7700_setup(i2c);
 }
 
 void taskI2CSensor(PTASKPARM p) {
     static int          state = STATE_READ_TEMP_1;
+    weather_packet_t *  pWeather = getWeatherPacket();
     rtc_t               delay = rtc_val_ms(4000);
     uint8_t             reg;
 
@@ -74,7 +80,7 @@ void taskI2CSensor(PTASKPARM p) {
 
         case STATE_READ_TEMP_2:
             lgLogDebug("Rd T2");
-            weather.rawTemperature = copyI2CReg_int16(buffer);
+            pWeather->rawTemperature = copyI2CReg_int16(buffer);
 
             delay = rtc_val_ms(250);
 
@@ -102,7 +108,7 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_HUMIDITY_2:
             lgLogDebug("Rd H2");
 
-            weather.rawHumidity = copyI2CReg_uint16(&buffer[3]);
+            pWeather->rawHumidity = copyI2CReg_uint16(&buffer[3]);
 
             delay = rtc_val_ms(240);
 
@@ -132,9 +138,9 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_PRESSURE_2:
             lgLogDebug("Rd P2");
 
-            weather.rawICPTemperature = copyI2CReg_uint16(&buffer[0]);
+            pWeather->rawICPTemperature = copyI2CReg_uint16(&buffer[0]);
 
-            weather.rawICPPressure = 
+            pWeather->rawICPPressure = 
                 (uint32_t)(((uint32_t)buffer[3] << 16) | 
                             ((uint32_t)buffer[4] << 8) | 
                             (uint32_t)buffer[6]);
@@ -168,7 +174,7 @@ void taskI2CSensor(PTASKPARM p) {
             ** The veml7700 seems to have the opposite response structure
             ** to other sensors, i.e. LSB then MSB...
             */
-            weather.rawLux = ((uint16_t)((((uint16_t)buffer[1]) << 8) | (uint16_t)buffer[0]));
+            pWeather->rawLux = ((uint16_t)((((uint16_t)buffer[1]) << 8) | (uint16_t)buffer[0]));
 
             delay = rtc_val_sec(19);
 
@@ -183,7 +189,7 @@ void taskI2CSensor(PTASKPARM p) {
             break;
 
         case STATE_SEND_PACKET:
-            memcpy(buffer, &weather, sizeof(weather_packet_t));
+            memcpy(buffer, pWeather, sizeof(weather_packet_t));
             nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
 
             delay = rtc_val_ms(125);
