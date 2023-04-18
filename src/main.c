@@ -162,7 +162,7 @@ int main(void) {
 
     scheduleTask(
             TASK_RAIN_GAUGE,
-            rtc_val_sec(200),
+            rtc_val_sec(60),
             true,
             NULL);
 

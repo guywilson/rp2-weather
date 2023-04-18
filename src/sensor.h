@@ -24,7 +24,8 @@ typedef struct {                                    // Offset-Description
     uint16_t            rawLux;                     // 0x16 - Raw I2C veml7700 lux value
 
     uint16_t            rawRainfall;                // 0x18 - Raw rain sensor count
-    uint16_t            rawWindspeed;               // 0x1A - Raw anemometer count
+    uint16_t            rawRainfallPerHour;         // 0x1A - Rain sensor count for last hour
+    uint16_t            rawWindspeed;               // 0x1C - Raw anemometer count
 }
 weather_packet_t;
 #pragma pack(pop)

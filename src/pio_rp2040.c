@@ -14,7 +14,8 @@
 
 #include "pulsecount.pio.h"
 
-#define PULSE_COUNT_BIT_SHIFT                2
+#define ANEMOMETER_PULSE_COUNT_BIT_SHIFT     2
+#define RAIN_GAUGE_PULSE_COUNT_BIT_SHIFT     1
 
 #define PIO_SM_ANEMOMETER                    0
 #define PIO_SM_RAIN_GAUGE                    1
@@ -26,7 +27,7 @@
 #define PIO_RAIN_GAUGE_OFFSET               16
 
 #define PIO_ANEMOMETER_TASK_RUNS_PER_SEC    10
-#define PIO_RAIN_GAUGE_TASK_RUNS_PER_HOUR   18
+#define PIO_RAIN_GAUGE_TASK_RUNS_PER_HOUR   60
 
 static uint32_t         averageBuffer[16];
 static uint             anemometerSM;
@@ -57,8 +58,8 @@ void pioInit() {
     pio_gpio_init(pio0, PIO_PIN_ANEMOMETER);
     pio_gpio_init(pio0, PIO_PIN_RAIN_GAUGE);
 
-    sm_config_set_in_shift(&anemometerConfig, false, true, PULSE_COUNT_BIT_SHIFT);
-    sm_config_set_in_shift(&rainGaugeConfig, false, true, PULSE_COUNT_BIT_SHIFT);
+    sm_config_set_in_shift(&anemometerConfig, false, true, ANEMOMETER_PULSE_COUNT_BIT_SHIFT);
+    sm_config_set_in_shift(&rainGaugeConfig, false, true, RAIN_GAUGE_PULSE_COUNT_BIT_SHIFT);
 
     sm_config_set_fifo_join(&anemometerConfig, PIO_FIFO_JOIN_RX);
     sm_config_set_fifo_join(&rainGaugeConfig, PIO_FIFO_JOIN_RX);
@@ -85,7 +86,7 @@ void taskAnemometer(PTASKPARM p) {
     ** all we need to calculate the pulse count is 
     ** the number of entries in the FIFO x the bits per entry...
     */
-    pulseCount += (pio_sm_get_rx_fifo_level(pio0, anemometerSM) * PULSE_COUNT_BIT_SHIFT);
+    pulseCount += (pio_sm_get_rx_fifo_level(pio0, anemometerSM) * ANEMOMETER_PULSE_COUNT_BIT_SHIFT);
     pio_sm_clear_fifos(pio0, anemometerSM);
     
     runCount++;
@@ -120,8 +121,11 @@ void taskAnemometer(PTASKPARM p) {
 
 void taskRainGuage(PTASKPARM p) {
     static int          runCount = 0;
-    static uint32_t     pulseCount = 0;
+    static uint32_t     pulsesPerHour = 0;
+    uint32_t            pulseCount = 0;
     weather_packet_t *  pWeather;
+
+    pWeather = getWeatherPacket();
 
     /*
     ** Pulses are bitshifted into the RX_FIFO by the PIO.
@@ -130,20 +134,24 @@ void taskRainGuage(PTASKPARM p) {
     ** all we need to calculate the pulse count is 
     ** the number of entries in the FIFO x the bits per entry...
     */
-    pulseCount += (pio_sm_get_rx_fifo_level(pio0, rainGaugeSM) * PULSE_COUNT_BIT_SHIFT);
+    pulseCount += (pio_sm_get_rx_fifo_level(pio0, rainGaugeSM) * RAIN_GAUGE_PULSE_COUNT_BIT_SHIFT);
     pio_sm_clear_fifos(pio0, rainGaugeSM);
+
+    pulsesPerHour += pulseCount;
+
+    /*
+    ** Our pulse count equates to pulses/minute...
+    */
+    pWeather->rawRainfall = (uint16_t)pulseCount;
+
+    lgLogDebug("Rainfall count: %d", pWeather->rawRainfall);
     
     runCount++;
 
     if (runCount == PIO_RAIN_GAUGE_TASK_RUNS_PER_HOUR) {
-        /*
-        ** Our pulse count equates to pulses/hour...
-        */
-        pWeather->rawRainfall = (uint16_t)pulseCount;
-
-        lgLogDebug("Rainfall count: %d", pWeather->rawRainfall);
+        pWeather->rawRainfallPerHour = pulsesPerHour;
 
         runCount = 0;
-        pulseCount = 0;
+        pulsesPerHour = 0;
     }
 }
