@@ -71,15 +71,11 @@ void adcIRQ() {
             case ADC_CHANNEL_BATTERY_VOLTAGE:
                 pSamples->adcBatteryVoltage = adc_fifo_get();
                 break;
-
-            case ADC_CHANNEL_INTERNAL_TEMPERATURE:
-                pSamples->adcRP2040Temperature = adc_fifo_get();
-                break;
         }
 
         channel++;
 
-        if (channel == 5) {
+        if (channel == 4) {
             channel = 1;
         }
     }
@@ -117,12 +113,6 @@ void taskADC(PTASKPARM p) {
     }
     pWeather->rawBatteryTemperature = sampleAvg >> 3;
     sampleAvg = 0;
-
-    for (i = 0;i < ADC_SAMPLE_BUFFER_SIZE;i++) {
-        sampleAvg += adcSamples[i].adcRP2040Temperature;
-    }
-    pWeather->rawChipTemperature = sampleAvg >> 3;
-    sampleAvg = 0;
 }
 
 void adcInit() {
@@ -133,24 +123,19 @@ void adcInit() {
     */
     memset(adcSamples, 0, sizeof(adc_samples_t) * ADC_SAMPLE_BUFFER_SIZE);
 
-    adc_gpio_init(26);
+//    adc_gpio_init(26);
     adc_gpio_init(27);
     adc_gpio_init(28);
     adc_gpio_init(29);
 
-    /*
-    ** On-chip temperature sensor...
-    */
     adc_select_input(ADC_CHANNEL_WIND_DIR);
-
-    adc_set_temp_sensor_enabled(true);
 
     /*
     ** 750 samples/sec
     */
     adc_set_clkdiv(63999.0f);
     
-    adc_set_round_robin(0x1E);
+    adc_set_round_robin(0x0E);
 
     adc_fifo_drain();
     adc_fifo_setup(true, false, 4, false, false);

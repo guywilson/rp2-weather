@@ -32,12 +32,13 @@ void taskBatteryMonitor(PTASKPARM p) {
         /*
         ** Steps we need to take:
         **
-        ** 1. Send a final message back to the RPi base station
-        ** 2. Stop the scheduler (by stopping the RTC timer)
-        ** 3. Switch off the I2C device power
-        ** 4. Stop all clocks other than the RTC
-        ** 5. Setup the RTC and set a timer for 36 to 48 hours
-        ** 6. Go to sleep zzzzzzzz
+        ** 1. Stop the scheduler (by stopping the scheduler tick timer)
+        ** 2. Turn off all GPIO pins (including onboard LED)
+        ** 3. Send a final message back to the RPi base station
+        ** 4. Switch off the I2C device power
+        ** 5. Stop all clocks other than the RTC
+        ** 6. Setup the RTC and set a timer for 36 to 48 hours
+        ** 7. Go to sleep zzzzzzzz
         */
 //        sleep_goto_sleep_until(&wakeTime, &wakeUp);
     }
