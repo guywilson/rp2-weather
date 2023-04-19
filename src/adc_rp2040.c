@@ -138,7 +138,7 @@ void adcInit() {
     adc_set_round_robin(0x0E);
 
     adc_fifo_drain();
-    adc_fifo_setup(true, false, 4, false, false);
+    adc_fifo_setup(true, false, 3, false, false);
 
     adc_irq_set_enabled(true);
 
