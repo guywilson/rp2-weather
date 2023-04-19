@@ -40,7 +40,8 @@ static uint8_t              buffer[32];
 weather_packet_t * getWeatherPacket() {
     static weather_packet_t     weather;
 
-    weather.packetID = 'W';
+    weather.packetID[0] = 'W';
+    weather.packetID[1] = 'P';
     
     return &weather;
 }
