@@ -125,7 +125,7 @@ int main(void) {
 		turnOff(LED_ONBOARD);
 	}
 
-	initScheduler(10);
+	initScheduler(11);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &WatchdogTask);
@@ -135,7 +135,7 @@ int main(void) {
     registerTask(TASK_ADC, &taskADC);
     registerTask(TASK_ANEMOMETER, &taskAnemometer);
     registerTask(TASK_RAIN_GAUGE, &taskRainGuage);
-//    registerTask(TASK_BATTERY_MONITOR, &taskBatteryMonitor);
+    registerTask(TASK_BATTERY_MONITOR, &taskBatteryMonitor);
     registerTask(TASK_PWM_ANEMOMETER, &taskPWMAnemometer);
     registerTask(TASK_PWM_RAIN_GAUGE, &taskPWMRainGauge);
 
@@ -154,6 +154,12 @@ int main(void) {
             false, 
 			NULL);
 
+	scheduleTask(
+			TASK_ADC, 
+			rtc_val_ms(2000), 
+            false, 
+			NULL);
+
     scheduleTask(
             TASK_ANEMOMETER,
             rtc_val_ms(100),
@@ -166,11 +172,11 @@ int main(void) {
             true,
             NULL);
 
-    // scheduleTask(
-    //         TASK_BATTERY_MONITOR,
-    //         rtc_val_sec(10),
-    //         true,
-    //         NULL);
+    scheduleTask(
+            TASK_BATTERY_MONITOR,
+            rtc_val_sec(10),
+            true,
+            NULL);
 
 	scheduleTask(
 			TASK_WATCHDOG, 

@@ -9,6 +9,7 @@
 #include "scheduler.h"
 
 #include "rtc_rp2040.h"
+#include "date_time.h"
 
 #define ALARM_NUM 0
 #define ALARM_IRQ TIMER_IRQ_0
@@ -16,14 +17,14 @@
 #define RTC_INTERRUPT_CYCLE             1000U
 
 datetime_t * _fillDateTime(datetime_t * dt) {
-    dt->day         = 14;
-    dt->dotw        = 5;
-    dt->month       = 4;
-    dt->year        = 2022;
+    dt->day         = DATE_TIME_DAY;
+    dt->dotw        = DATE_TIME_DOW;
+    dt->month       = DATE_TIME_MONTH;
+    dt->year        = DATE_TIME_YEAR;
 
-    dt->hour        = 14;
-    dt->min         = 20;
-    dt->sec         = 0;
+    dt->hour        = DATE_TIME_HOUR;
+    dt->min         = DATE_TIME_MINUTE;
+    dt->sec         = DATE_TIME_SECOND;
 
     return dt;
 }
@@ -49,11 +50,11 @@ static void irqTimerAlarm() {
 }
 
 void setupRTC() {
-    // datetime_t          dt;
+    datetime_t          dt;
 
-    // rtc_init();
+    rtc_init();
 
-    // rtc_set_datetime(_fillDateTime(&dt));
+    rtc_set_datetime(_fillDateTime(&dt));
 
     hw_set_bits(&timer_hw->inte, 1u << ALARM_NUM);
 

@@ -20,9 +20,13 @@ void wakeUp(void) {
 }
 
 void taskBatteryMonitor(PTASKPARM p) {
+//    sleep_packet_t              sleepPacket;
     weather_packet_t *          pWeather;
+//    uint8_t                     coreID;
     
     pWeather = getWeatherPacket();
+
+//    coreID = getCoreID();
 
     /*
     ** If the battery voltage has dropped below critical,
@@ -34,12 +38,12 @@ void taskBatteryMonitor(PTASKPARM p) {
         **
         ** 1. Stop the scheduler (by stopping the scheduler tick timer)
         ** 2. Turn off all GPIO pins (including onboard LED)
-        ** 3. Send a final message back to the RPi base station
+        ** 3. Stop the ADC
+        ** 4. Send a final message back to the RPi base station
         ** 4. Switch off the I2C device power
         ** 5. Stop all clocks other than the RTC
         ** 6. Setup the RTC and set a timer for 36 to 48 hours
         ** 7. Go to sleep zzzzzzzz
         */
-//        sleep_goto_sleep_until(&wakeTime, &wakeUp);
     }
 }

@@ -6,8 +6,8 @@
 #include "utils.h"
 #include "taskdef.h"
 
-#define HEARTBEAT_ON_TIME                50
-#define HEARBEAT_OFF_TIME               950
+#define HEARTBEAT_ON_TIME                25
+#define HEARBEAT_OFF_TIME               975
 
 void HeartbeatTask(PTASKPARM p) {
   static uint8_t on = 0;
