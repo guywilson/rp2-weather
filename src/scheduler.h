@@ -131,10 +131,13 @@ void		registerTask(uint16_t taskID, void (* run)(PTASKPARM));
 void		deregisterTask(uint16_t taskID);
 
 void        scheduleTask(uint16_t taskID, rtc_t time, bool isPeriodic, PTASKPARM p);
-//void        scheduleTaskOnce(uint16_t taskID, rtc_t time, PTASKPARM p);
 void		rescheduleTask(uint16_t taskID, PTASKPARM p);
 void		unscheduleTask(uint16_t taskID);
 
 void		schedule();
+
+#ifdef PICO_MULTICORE
+void        setTaskAttributes(uint16_t taskID, bool isCore0);
+#endif
 
 #endif

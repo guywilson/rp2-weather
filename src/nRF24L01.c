@@ -12,6 +12,7 @@
 #include "spi_rp2040.h"
 #include "rtc_rp2040.h"
 #include "nRF24L01.h"
+#include "gpio_def.h"
 
 #define NRF24L01_REMOTE_ADDRESS         "AZ438"
 #define NRF24L01_LOCAL_ADDRESS          "AZ437"

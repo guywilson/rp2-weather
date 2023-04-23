@@ -2,16 +2,6 @@
 #define __INCL_NRF24L01
 
 /*
-** PIN definitions
-*/
-#define NRF24L01_SPI_PIN_CE                         26
-#define NRF24L01_SPI_PIN_CSN                         5
-#define NRF24L01_SPI_PIN_IRQ                        28
-#define NRF24L01_SPI_PIN_MOSI                        3
-#define NRF24L01_SPI_PIN_MISO                        4
-#define NRF24L01_SPI_PIN_SCK                         2
-
-/*
 ** nRF24L01 commands
 */
 #define NRF24L01_CMD_R_REGISTER                     0x00

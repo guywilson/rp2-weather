@@ -23,6 +23,7 @@
 #include "nRF24L01.h"
 #include "utils.h"
 
+#define STATE_POWERUP               0x0010
 #define STATE_READ_TEMP_1           0x0100
 #define STATE_READ_TEMP_2           0x0101
 #define STATE_READ_HUMIDITY_1       0x0200
@@ -55,12 +56,19 @@ int initSensors(i2c_inst_t * i2c) {
 }
 
 void taskI2CSensor(PTASKPARM p) {
-    static int          state = STATE_READ_TEMP_1;
+    static int          state = STATE_POWERUP;
     weather_packet_t *  pWeather = getWeatherPacket();
     rtc_t               delay = rtc_val_ms(4000);
     uint8_t             reg;
 
     switch (state) {
+        case STATE_POWERUP:
+            i2cPowerUp();
+
+            state = STATE_READ_TEMP_1;
+            delay = rtc_val_ms(4000);
+            break;
+
         case STATE_READ_TEMP_1:
             lgLogDebug("Rd T1");
             reg = TMP117_REG_TEMP;
@@ -177,8 +185,9 @@ void taskI2CSensor(PTASKPARM p) {
             */
             pWeather->rawLux = ((uint16_t)((((uint16_t)buffer[1]) << 8) | (uint16_t)buffer[0]));
 
-            delay = rtc_val_sec(19);
+            i2cPowerDown();
 
+            delay = rtc_val_sec(25);
             state = STATE_SEND_BEGIN;
             break;
 
@@ -201,7 +210,7 @@ void taskI2CSensor(PTASKPARM p) {
             nRF24L01_powerDown(spi0);
 
             delay = rtc_val_ms(125);
-            state = STATE_READ_TEMP_1;
+            state = STATE_POWERUP;
             break;
     }
 

@@ -5,6 +5,7 @@
 #include "heartbeat.h"
 #include "utils.h"
 #include "taskdef.h"
+#include "gpio_def.h"
 
 #define HEARTBEAT_ON_TIME                25
 #define HEARBEAT_OFF_TIME               975
@@ -13,7 +14,7 @@ void HeartbeatTask(PTASKPARM p) {
   static uint8_t on = 0;
 
   if (on) {
-    turnOff(LED_ONBOARD);
+    turnOff(ONBAORD_LED_PIN);
     on = 0;
 
     scheduleTask(
@@ -23,7 +24,7 @@ void HeartbeatTask(PTASKPARM p) {
             NULL);
   }
   else {
-    turnOn(LED_ONBOARD);
+    turnOn(ONBAORD_LED_PIN);
     on = 1;
 
     scheduleTask(

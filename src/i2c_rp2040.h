@@ -10,7 +10,8 @@
 
 void taskI2CWrite(PTASKPARM p);
 void taskI2CRead(PTASKPARM p);
-
+void i2cPowerUp(void);
+void i2cPowerDown(void);
 uint32_t i2cInit(i2c_inst_t *i2c, uint32_t baudrate);
 
 int i2cTriggerReadRegister(

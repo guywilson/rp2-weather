@@ -5,8 +5,6 @@
 #ifndef __INCL_UTILS
 #define __INCL_UTILS
 
-#define		LED_ONBOARD			PICO_DEFAULT_LED_PIN
-
 void		    setupLEDPin(void);
 void		    turnOn(int LED_ID);
 void		    turnOff(int LED_ID);

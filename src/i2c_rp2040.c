@@ -14,6 +14,7 @@
 #include "taskdef.h"
 #include "rtc_rp2040.h"
 #include "i2c_rp2040.h"
+#include "gpio_def.h"
 
 #define I2C_READ_STATE_BEGIN                    0x0010
 #define I2C_READ_STATE_WRITE_CMD                0x0020
@@ -300,6 +301,14 @@ static uint32_t i2cSetBaudrate(i2c_inst_t *i2c, uint32_t baudrate) {
     return freq_in / period;
 }
 
+void i2cPowerUp(void) {
+    gpio_put(I2C0_POWER_PIN, 1);
+}
+
+void i2cPowerDown(void) {
+    gpio_put(I2C0_POWER_PIN, 0);
+}
+
 uint32_t i2cInit(i2c_inst_t *i2c, uint32_t baudrate) {
     reset_block(i2c == i2c0 ? RESETS_RESET_I2C0_BITS : RESETS_RESET_I2C1_BITS);
     unreset_block_wait(i2c == i2c0 ? RESETS_RESET_I2C0_BITS : RESETS_RESET_I2C1_BITS);
@@ -321,6 +330,10 @@ uint32_t i2cInit(i2c_inst_t *i2c, uint32_t baudrate) {
 
     // Always enable the DREQ signalling -- harmless if DMA isn't listening
     i2c->hw->dma_cr = I2C_IC_DMA_CR_TDMAE_BITS | I2C_IC_DMA_CR_RDMAE_BITS;
+
+    gpio_init(I2C0_POWER_PIN);
+    gpio_set_dir(I2C0_POWER_PIN, GPIO_OUT);
+    gpio_set_drive_strength(I2C0_POWER_PIN, GPIO_DRIVE_STRENGTH_12MA);
 
     // Re-sets i2c->hw->enable upon returning:
     return i2c_set_baudrate(i2c, baudrate);

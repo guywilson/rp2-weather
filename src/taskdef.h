@@ -3,6 +3,7 @@
 
 #define TASK_HEARTBEAT			0x0100
 #define TASK_WATCHDOG           0x0200
+#define TASK_WATCHDOG_WAKEUP    0x0201
 #define TASK_DEBUG              0x0300
 #define TASK_I2C_SENSOR         0x0400
 #define TASK_I2C_READ           0x0500

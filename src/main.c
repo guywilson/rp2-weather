@@ -29,13 +29,7 @@
 #include "icp10125.h"
 #include "nRF24L01.h"
 #include "utils.h"
-
-#define I2C_SDA_ALT_PIN				16
-#define I2C_SLK_ALT_PIN				17
-
-#define PWM_RAIN_GAUGE_PIN          14
-#define PWM_ANEMOMETER_PIN          15
-
+#include "gpio_def.h"
 
 void taskPWMAnemometer(PTASKPARM p) {
     static int          state = 0;
@@ -117,18 +111,19 @@ void setup(void) {
 }
 
 int main(void) {
+    bool            isWatchdogReboot = false;
+
 	setup();
 
 	if (watchdog_caused_reboot()) {
-		turnOn(LED_ONBOARD);
-		sleep_ms(2000);
-		turnOff(LED_ONBOARD);
+        isWatchdogReboot = true;
 	}
 
-	initScheduler(11);
+	initScheduler(12);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
-	registerTask(TASK_WATCHDOG, &WatchdogTask);
+	registerTask(TASK_WATCHDOG, &taskWatchdog);
+	registerTask(TASK_WATCHDOG_WAKEUP, &taskWatchdogWakeUp);
 	registerTask(TASK_I2C_SENSOR, &taskI2CSensor);
     registerTask(TASK_I2C_READ, &taskI2CRead);
     registerTask(TASK_I2C_WRITE, &taskI2CWrite);
@@ -178,11 +173,21 @@ int main(void) {
             true,
             NULL);
 
+    setTaskAttributes(TASK_BATTERY_MONITOR, true);
+
 	scheduleTask(
 			TASK_WATCHDOG, 
 			rtc_val_ms(50), 
             true, 
 			NULL);
+
+    if (isWatchdogReboot) {
+        scheduleTask(
+            TASK_WATCHDOG_WAKEUP, 
+            rtc_val_sec(3), 
+            false, 
+            NULL);
+    }
 
     /*
     ** Use the GPIO to mimic pulses from the anemometer

@@ -50,16 +50,16 @@ static void irqTimerAlarm() {
 }
 
 void setupRTC() {
-    datetime_t          dt;
-
-    rtc_init();
-
-    rtc_set_datetime(_fillDateTime(&dt));
-
     hw_set_bits(&timer_hw->inte, 1u << ALARM_NUM);
 
     irq_set_exclusive_handler(TIMER_IRQ_0, irqTimerAlarm);
     irq_set_enabled(ALARM_IRQ, true);
 
     timer_hw->alarm[ALARM_NUM] = (uint32_t)(timer_hw->timerawl + RTC_INTERRUPT_CYCLE);
+}
+
+void disableRTC() {
+    hw_clear_bits(&timer_hw->inte, 1u << ALARM_NUM);
+
+    irq_set_enabled(ALARM_IRQ, false);
 }
