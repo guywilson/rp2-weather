@@ -28,8 +28,8 @@
 #define STATE_RADIO_FINISH                  0x0300
 #define STATE_SLEEP                         0xFF00
 
-
-datetime_t          wakeTime;
+datetime_t                  dt;
+datetime_t                  alarm_dt;
 
 void wakeUp(void) {
 	/*
@@ -43,8 +43,6 @@ void taskBatteryMonitor(PTASKPARM p) {
     static int                  state = STATE_RADIO_POWER_UP;
     uint8_t                     buffer[32];
     rtc_t                       delay;
-    datetime_t                  dt;
-    datetime_t                  alarm_dt;
     sleep_packet_t              sleepPacket;
     weather_packet_t *          pWeather;
     
