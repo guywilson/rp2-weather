@@ -28,7 +28,6 @@
 #define STATE_RADIO_FINISH                  0x0300
 #define STATE_SLEEP                         0xFF00
 
-
 datetime_t                  dt;
 datetime_t                  alarm_dt;
 
