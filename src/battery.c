@@ -29,7 +29,8 @@
 #define STATE_SLEEP                         0xFF00
 
 
-datetime_t          wakeTime;
+datetime_t                  dt;
+datetime_t                  alarm_dt;
 
 void wakeUp(void) {
 	/*
@@ -41,22 +42,27 @@ void wakeUp(void) {
 void taskBatteryMonitor(PTASKPARM p) {
     static bool                 doSleep = false;
     static int                  state = STATE_RADIO_POWER_UP;
+    static int                  runCount = 0;
     uint8_t                     buffer[32];
-    rtc_t                       delay;
-    datetime_t                  dt;
-    datetime_t                  alarm_dt;
+    rtc_t                       delay = rtc_val_sec(10);
     sleep_packet_t              sleepPacket;
     weather_packet_t *          pWeather;
     
     pWeather = getWeatherPacket();
 
-    /*
+    /* 
     ** If the battery voltage has dropped below critical,
     ** stop everything and put the RP2040 to sleep...
     */
     if (pWeather->rawBatteryVolts < ADC_BATTERY_VOLTAGE_CRITICAL) {
         doSleep = true;
     }
+    // else if (runCount == 6) {
+    //     /*
+    //     ** For debugging, sleep after 60 seconds
+    //     */
+    //     doSleep = true;
+    // }
 
     if (doSleep) {
         /*
@@ -156,7 +162,9 @@ void taskBatteryMonitor(PTASKPARM p) {
                 __wfi();
                 break;
         }
-
-        scheduleTask(TASK_BATTERY_MONITOR, delay, false, NULL);
     }
+
+    scheduleTask(TASK_BATTERY_MONITOR, delay, false, NULL);
+
+    runCount++;
 }

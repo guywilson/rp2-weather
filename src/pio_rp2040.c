@@ -23,6 +23,13 @@
 #define PIO_PIN_ANEMOMETER                  18
 #define PIO_PIN_RAIN_GAUGE                  12
 
+/*
+** On the bc-robotics 'weather' board, the RJ11
+** sockets are wired to:
+**
+#define PIO_PIN_ANEMOMETER                  26
+#define PIO_PIN_RAIN_GAUGE                   3
+*/
 #define PIO_ANEMOMETER_OFFSET                0
 #define PIO_RAIN_GAUGE_OFFSET               16
 

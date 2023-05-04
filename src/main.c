@@ -170,7 +170,7 @@ int main(void) {
     scheduleTask(
             TASK_BATTERY_MONITOR,
             rtc_val_sec(10),
-            true,
+            false,
             NULL);
 
     setTaskAttributes(TASK_BATTERY_MONITOR, true);
