@@ -251,14 +251,14 @@ int nRF24L01_setup(spi_inst_t * spi) {
     nRF24L01_writeRegister(spi, NRF24L01_REG_EN_RXADDR, 0x01, &statusReg);
     nRF24L01_writeRegister(spi, NRF24L01_REG_SETUP_AW, 0x03, &statusReg);
     nRF24L01_writeRegister(spi, NRF24L01_REG_SETUP_RETR, 0x00, &statusReg);
-    nRF24L01_writeRegister(spi, NRF24L01_REG_RF_CH, 40, &statusReg);
+    nRF24L01_writeRegister(spi, NRF24L01_REG_RF_CH, 76, &statusReg);
 
     nRF24L01_writeRegister(
                     spi, 
                     NRF24L01_REG_RF_SETUP, 
                     NRF24L01_RF_SETUP_RF_POWER_HIGH | 
                     NRF24L01_RF_SETUP_RF_LNA_GAIN_OFF | 
-                    NRF24L01_RF_SETUP_DATA_RATE_2MBPS, 
+                    NRF24L01_RF_SETUP_DATA_RATE_1MBPS, 
                     &statusReg);
 
     nRF24L01_writeRegister(

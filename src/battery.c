@@ -42,6 +42,7 @@ void taskBatteryMonitor(PTASKPARM p) {
     static bool                 doSleep = false;
     static int                  state = STATE_RADIO_POWER_UP;
     static int                  runCount = 0;
+    static uint16_t             lastBatteryVolts = 0;
     uint8_t                     buffer[32];
     rtc_t                       delay = rtc_val_sec(10);
     sleep_packet_t              sleepPacket;
@@ -53,7 +54,7 @@ void taskBatteryMonitor(PTASKPARM p) {
     ** If the battery voltage has dropped below critical,
     ** stop everything and put the RP2040 to sleep...
     */
-    if (pWeather->rawBatteryVolts < ADC_BATTERY_VOLTAGE_CRITICAL) {
+    if (pWeather->rawBatteryVolts < ADC_BATTERY_VOLTAGE_CRITICAL && lastBatteryVolts < ADC_BATTERY_VOLTAGE_CRITICAL) {
         doSleep = true;
     }
     // else if (runCount == 6) {
@@ -63,6 +64,8 @@ void taskBatteryMonitor(PTASKPARM p) {
     //     doSleep = true;
     // }
 
+    lastBatteryVolts = pWeather->rawBatteryVolts;
+    
     if (doSleep) {
         /*
         ** Steps we need to take:
