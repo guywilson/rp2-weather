@@ -17,6 +17,9 @@
 #define NRF24L01_REMOTE_ADDRESS         "AZ438"
 #define NRF24L01_LOCAL_ADDRESS          "AZ437"
 
+#define NRF24L01_RF_CHANNEL             76
+
+
 typedef struct {
     uint8_t         CONFIG;
     uint8_t         EN_AA;
@@ -251,7 +254,15 @@ int nRF24L01_setup(spi_inst_t * spi) {
     nRF24L01_writeRegister(spi, NRF24L01_REG_EN_RXADDR, 0x01, &statusReg);
     nRF24L01_writeRegister(spi, NRF24L01_REG_SETUP_AW, 0x03, &statusReg);
     nRF24L01_writeRegister(spi, NRF24L01_REG_SETUP_RETR, 0x00, &statusReg);
-    nRF24L01_writeRegister(spi, NRF24L01_REG_RF_CH, 76, &statusReg);
+
+    /*
+    ** Set the RF channel to use...
+    */
+    nRF24L01_writeRegister(
+                    spi, 
+                    NRF24L01_REG_RF_CH, 
+                    NRF24L01_RF_CHANNEL, 
+                    &statusReg);
 
     nRF24L01_writeRegister(
                     spi, 
@@ -276,7 +287,7 @@ int nRF24L01_setup(spi_inst_t * spi) {
     ** Activate additional features...
     */
     spiWriteReadByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_CMD_ACTIVATE, &statusReg, true);
-    spiWriteByte(spi, NRF24L01_SPI_PIN_CSN, 0x73, false);
+    spiWriteByte(spi, NRF24L01_SPI_PIN_CSN, NRF24L01_ACTIVATE_SPECIAL_BYTE, false);
 
     /*
     ** Enable NOACK transmit & dynamic payload length...

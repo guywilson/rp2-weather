@@ -90,6 +90,8 @@
 #define NRF24L01_STATUS_R_RX_FIFO_EMPTY             0x0E
 #define NRF24L01_STATUS_R_RX_DR                     0x40
 
+#define NRF24L01_ACTIVATE_SPECIAL_BYTE              0x73
+
 /*
 ** FEATURE register flags...
 */
