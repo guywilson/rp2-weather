@@ -7,6 +7,7 @@
 #include "hardware/pio.h"
 #include "pio_rp2040.h"
 #include "rtc_rp2040.h"
+#include "gpio_def.h"
 #include "logger.h"
 #include "scheduler.h"
 #include "taskdef.h"
@@ -19,9 +20,6 @@
 
 #define PIO_SM_ANEMOMETER                    0
 #define PIO_SM_RAIN_GAUGE                    1
-
-#define PIO_PIN_ANEMOMETER                  18
-#define PIO_PIN_RAIN_GAUGE                  12
 
 /*
 ** On the bc-robotics 'weather' board, the RJ11

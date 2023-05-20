@@ -230,9 +230,6 @@ int nRF24L01_setup(spi_inst_t * spi) {
 	gpio_set_dir(NRF24L01_SPI_PIN_CE, true);
 	gpio_put(NRF24L01_SPI_PIN_CE, false);
 
-	gpio_init(NRF24L01_SPI_PIN_IRQ);
-	gpio_set_dir(NRF24L01_SPI_PIN_IRQ, false);				    // SPI IRQ
-
 	gpio_set_function(NRF24L01_SPI_PIN_MOSI, GPIO_FUNC_SPI);	// SPI TX
 	gpio_set_function(NRF24L01_SPI_PIN_MISO, GPIO_FUNC_SPI);	// SPI RX
 	gpio_set_function(NRF24L01_SPI_PIN_SCK, GPIO_FUNC_SPI);	    // SPI SCK
