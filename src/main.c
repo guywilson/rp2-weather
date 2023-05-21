@@ -80,7 +80,7 @@ void setup(void) {
 	setupRTC();
 	setupSerial();
 
-	i2cInit(i2c0, 400000);
+	i2c_init(i2c0, 400000);
 
     gpio_set_function(I2C_SDA_ALT_PIN, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SLK_ALT_PIN, GPIO_FUNC_I2C);
@@ -119,14 +119,12 @@ int main(void) {
         isWatchdogReboot = true;
 	}
 
-	initScheduler(12);
+	initScheduler(10);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &taskWatchdog);
 	registerTask(TASK_WATCHDOG_WAKEUP, &taskWatchdogWakeUp);
 	registerTask(TASK_I2C_SENSOR, &taskI2CSensor);
-    registerTask(TASK_I2C_READ, &taskI2CRead);
-    registerTask(TASK_I2C_WRITE, &taskI2CWrite);
     registerTask(TASK_ADC, &taskADC);
     registerTask(TASK_ANEMOMETER, &taskAnemometer);
     registerTask(TASK_RAIN_GAUGE, &taskRainGuage);
@@ -145,7 +143,7 @@ int main(void) {
 	*/
 	scheduleTask(
 			TASK_I2C_SENSOR, 
-			rtc_val_ms(4000), 
+			rtc_val_ms(5000), 
             false, 
 			NULL);
 

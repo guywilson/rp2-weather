@@ -43,6 +43,7 @@ if (PICO_ON_DEVICE)
             src/SHT4X.c
             src/icp10125.c
             src/veml7700.c
+            src/lc709203.c
             src/nRF24L01.c
             src/heartbeat.c
             src/battery.c

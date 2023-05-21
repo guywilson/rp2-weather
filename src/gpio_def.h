@@ -10,7 +10,7 @@
 #define PWM_ANEMOMETER_PIN          15
 
 #define PIO_PIN_ANEMOMETER          18
-#define PIO_PIN_RAIN_GAUGE          12
+#define PIO_PIN_RAIN_GAUGE          13
 
 #define NRF24L01_SPI_PIN_CE          6
 #define NRF24L01_SPI_PIN_CSN         5

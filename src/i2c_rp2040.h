@@ -8,49 +8,8 @@
 
 #define I2C_SDA_HOLD                38
 
-void taskI2CWrite(PTASKPARM p);
-void taskI2CRead(PTASKPARM p);
 void i2cPowerUp(void);
 void i2cPowerDown(void);
-uint32_t i2cInit(i2c_inst_t *i2c, uint32_t baudrate);
-
-int i2cTriggerReadRegister(
-                i2c_inst_t * i2c, 
-                uint16_t callbackTask, 
-                rtc_t writeReadDelay, 
-                uint8_t addr, 
-                uint8_t * src,
-                size_t srcLen,
-                uint8_t * dst, 
-                size_t dstLen, 
-                bool nostopWrite,
-                bool nostopRead);
-int i2cTriggerRead(
-            i2c_inst_t * i2c, 
-            uint16_t callbackTask, 
-            uint8_t addr, 
-            uint8_t * dst, 
-            size_t len, 
-            bool nostop);
-int i2cTriggerWrite(
-            i2c_inst_t * i2c, 
-            uint16_t callbackTask, 
-            uint8_t addr, 
-            uint8_t * src, 
-            size_t len, 
-            bool nostop);
-int i2cReadBlocking(
-            i2c_inst_t * i2c, 
-            uint8_t addr, 
-            uint8_t * dst, 
-            size_t len, 
-            bool nostop);
-int i2cWriteBlocking(
-            i2c_inst_t * i2c, 
-            uint8_t addr, 
-            const uint8_t * src, 
-            size_t len, 
-            bool nostop);
 int i2cWriteRegister(
             i2c_inst_t *i2c, 
             const uint addr, 
