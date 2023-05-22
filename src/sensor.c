@@ -25,8 +25,10 @@
 #include "utils.h"
 
 #define STATE_READ_TEMP             0x0100
-#define STATE_READ_HUMIDITY         0x0200
-#define STATE_READ_PRESSURE         0x0300
+#define STATE_READ_HUMIDITY_1       0x0200
+#define STATE_READ_HUMIDITY_2       0x0201
+#define STATE_READ_PRESSURE_1       0x0300
+#define STATE_READ_PRESSURE_2       0x0301
 #define STATE_READ_LUX              0x0400
 #define STATE_READ_BATTERY_VOLTS    0x0500
 #define STATE_READ_BATTERY_PERCENT  0x0501
@@ -36,6 +38,7 @@
 #define STATE_SEND_PACKET           0x07FF
 
 static uint8_t              buffer[32];
+static char                 szBuffer[128];
 
 weather_packet_t * getWeatherPacket() {
     static weather_packet_t     weather;
@@ -56,6 +59,9 @@ int initSensors(i2c_inst_t * i2c) {
 
 void taskI2CSensor(PTASKPARM p) {
     static int          state = STATE_READ_TEMP;
+    int                 i;
+    int                 count = 0;
+    uint8_t             input[2];
     weather_packet_t *  pWeather = getWeatherPacket();
     rtc_t               delay;
 
@@ -67,30 +73,50 @@ void taskI2CSensor(PTASKPARM p) {
 
             pWeather->rawTemperature = copyI2CReg_int16(buffer);
 
-            state = STATE_READ_HUMIDITY;
+            state = STATE_READ_HUMIDITY_1;
             delay = rtc_val_ms(1000);
             break;
 
-        case STATE_READ_HUMIDITY:
-            lgLogDebug("Rd H");
+        case STATE_READ_HUMIDITY_1:
+            lgLogDebug("Rd H1");
 
-            i2cReadRegister(i2c0, SHT4X_ADDRESS, SHT4X_CMD_MEASURE_HI_PRN, buffer, 6);
+            input[0] = SHT4X_CMD_MEASURE_HI_PRN;
+
+            i2c_write_blocking(i2c0, SHT4X_ADDRESS, input, 1, true);
+
+            state = STATE_READ_HUMIDITY_2;
+            delay = rtc_val_ms(12);
+            break;
+
+        case STATE_READ_HUMIDITY_2:
+            lgLogDebug("Rd H2");
+
+            i2c_read_blocking(i2c0, SHT4X_ADDRESS, buffer, 6, false);
 
             pWeather->rawHumidity = copyI2CReg_uint16(&buffer[3]);
 
-            state = STATE_READ_PRESSURE;
-            delay = rtc_val_ms(1000);
+            state = STATE_READ_PRESSURE_1;
+            delay = rtc_val_ms(988);
             break;
 
-        case STATE_READ_PRESSURE:
-            lgLogDebug("Rd P");
-            buffer[0] = 0x70;
-            buffer[1] = 0xDF;
+        case STATE_READ_PRESSURE_1:
+            lgLogDebug("Rd P1");
+            
+            input[0] = 0x70;
+            input[1] = 0xDF;
 
-            i2c_write_blocking(i2c0, ICP10125_ADDRESS, buffer, 2, false);
+            i2c_write_blocking(i2c0, ICP10125_ADDRESS, input, 2, false);
+
+            state = STATE_READ_PRESSURE_2;
+            delay = rtc_val_ms(25);
+            break;
+
+        case STATE_READ_PRESSURE_2:
+            lgLogDebug("Rd P2");
+            
             i2c_read_blocking(i2c0, ICP10125_ADDRESS, buffer, 9, false);
 
-            pWeather->rawICPTemperature = copyI2CReg_uint16(&buffer[0]);
+            pWeather->rawICPTemperature = copyI2CReg_uint16(buffer);
 
             pWeather->rawICPPressure = 
                 (uint32_t)(((uint32_t)buffer[3] << 16) | 
@@ -98,12 +124,11 @@ void taskI2CSensor(PTASKPARM p) {
                             (uint32_t)buffer[6]);
 
             state = STATE_READ_LUX;
-            delay = rtc_val_ms(1000);
+            delay = rtc_val_ms(975);
             break;
 
         case STATE_READ_LUX:
             lgLogDebug("Rd L");
-            buffer[0] = VEML7700_REG_ALS;
 
             i2cReadRegister(i2c0, VEML7700_ADDRESS, VEML7700_REG_ALS, buffer, 2);
 
@@ -123,6 +148,8 @@ void taskI2CSensor(PTASKPARM p) {
                 lgLogError("LC CRC fail");
             }
 
+            lgLogDebug("BV: %.2f", (float)pWeather->rawBatteryVolts / 1000.0);
+
             delay = rtc_val_ms(1000);
             state = STATE_READ_BATTERY_PERCENT;
             break;
@@ -133,6 +160,8 @@ void taskI2CSensor(PTASKPARM p) {
                 lgLogError("LC CRC fail");
             }
 
+            lgLogDebug("BP: %.2f", (float)pWeather->rawBatteryPercentage / 10.0);
+
             delay = rtc_val_ms(1000);
             state = STATE_READ_BATTERY_TEMP;
             break;
@@ -142,6 +171,8 @@ void taskI2CSensor(PTASKPARM p) {
             if (lc709203_read_register(i2c0, LC709203_CMD_CELL_TEMERATURE, &pWeather->rawBatteryTemperature)) {
                 lgLogError("LC CRC fail");
             }
+
+            lgLogDebug("BT: %.2f", ((float)pWeather->rawBatteryTemperature / 10.0) - 273.15);
 
             delay = rtc_val_sec(20);
             state = STATE_SEND_BEGIN;
@@ -156,6 +187,12 @@ void taskI2CSensor(PTASKPARM p) {
 
         case STATE_SEND_PACKET:
             memcpy(buffer, pWeather, sizeof(weather_packet_t));
+
+            for (i = 0;i < sizeof(weather_packet_t); i++) {
+                count += sprintf(&szBuffer[count], "%02X", buffer[i]);
+            }
+            lgLogDebug("txBuffer: %s", szBuffer);
+
             nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
 
             delay = rtc_val_ms(125);

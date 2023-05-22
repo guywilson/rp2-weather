@@ -114,7 +114,7 @@ void taskADC(PTASKPARM p) {
                             break;
 
                         case ADC_CHANNEL_BATTERY_VOLTAGE:
-                            pSamples->adcBatteryVoltage = adc_fifo_get();
+                            pSamples->adcVSYSVoltage = adc_fifo_get();
                             break;
                     }
 
@@ -155,9 +155,9 @@ void taskADC(PTASKPARM p) {
             sampleAvg = 0;
 
             for (i = 0;i < ADC_SAMPLE_BUFFER_SIZE;i++) {
-                sampleAvg += adcSamples[i].adcBatteryVoltage;
+                sampleAvg += adcSamples[i].adcVSYSVoltage;
             }
-            pWeather->rawBatteryVolts = sampleAvg >> 3;
+            pWeather->rawVSYSVoltage = sampleAvg >> 3;
             sampleAvg = 0;
 
             delay = rtc_val_sec(20);

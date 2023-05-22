@@ -15,9 +15,7 @@
 
 typedef struct {
     uint16_t            adcWindDir;
-    uint16_t            adcBatteryVoltage;
-    uint16_t            adcBatteryTemperature;
-    uint16_t            adcRP2040Temperature;
+    uint16_t            adcVSYSVoltage;
 }
 adc_samples_t;
 
