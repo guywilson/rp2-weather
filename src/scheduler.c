@@ -27,10 +27,13 @@
 #include "pico/multicore.h"
 #include "hardware/irq.h"
 #include "hardware/uart.h"
+#include "hardware/gpio.h"
+#include "hardware/structs/sio.h"
 #endif
 
 #include "scheduler.h"
 #include "schederr.h"
+#include "gpio_def.h"
 
 #define TRACK_CPU_PCT
 
@@ -146,6 +149,8 @@ PTASKDESC                   core1TaskDescPool;
 ******************************************************************************/
 void _rtcISR()
 {
+    gpio_put(SCHED_CPU0_TRACE, true);
+
 #if RTC_INTERRUPT_PRESCALER != 1
 	_tickCount++;
 
@@ -215,30 +220,31 @@ static rtc_t _getScheduledTime(rtc_t startTime, rtc_t requestedDelay)
 #endif
 
 #ifdef PICO_MULTICORE
-void core1FifoDataAvailableHandler() {
+void _core1_main(void)
+{
 	PTASKDESC			td = NULL;
 	uint32_t			data = 0;
 
-    data = multicore_fifo_pop_blocking();
-
-    td = (PTASKDESC)(data);
-
-    /*
-    ** Run the task here (on core 1)...
-    */
-    isCoreOneBusy = true;
-    td->run(td->pParameter);
-    td->isAllocated = 0;
-    isCoreOneBusy = false;
-}
-
-void _core1_main(void)
-{
-    irq_set_exclusive_handler(SIO_IRQ_PROC1, core1FifoDataAvailableHandler);
-    irq_set_enabled(SIO_IRQ_PROC1, true);
+    gpio_init(SCHED_CPU1_TRACE);
+    gpio_set_function(SCHED_CPU1_TRACE, GPIO_FUNC_SIO);
+    gpio_set_dir(SCHED_CPU1_TRACE, true);
 
 	while (1) {
-		__wfi();
+        data = multicore_fifo_pop_blocking();
+    
+        gpio_put(SCHED_CPU1_TRACE, true);
+        
+        td = (PTASKDESC)(data);
+
+        /*
+        ** Run the task here (on core 1)...
+        */
+        isCoreOneBusy = true;
+        td->run(td->pParameter);
+        td->isAllocated = 0;
+        isCoreOneBusy = false;
+
+        gpio_put(SCHED_CPU1_TRACE, false);        
 	}
 }
 #endif
@@ -412,6 +418,10 @@ printf("Allocated %d tasks\n", taskArrayLength);
 	*/
 	multicore_launch_core1(_core1_main);
 #endif
+
+    gpio_init(SCHED_CPU0_TRACE);
+    gpio_set_function(SCHED_CPU0_TRACE, GPIO_FUNC_SIO);
+    gpio_set_dir(SCHED_CPU0_TRACE, true);
 }
 
 /******************************************************************************
@@ -742,6 +752,8 @@ void schedule()
 #endif
 #ifdef PICO_MULTICORE
 		if (td == head) {
+            gpio_put(SCHED_CPU0_TRACE, false);
+
 			/*
 			** If we've looped through all the registered tasks, sleep
 			** until the next interrupt to save power...
