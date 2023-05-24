@@ -100,6 +100,7 @@ void setup(void) {
 
     adcInit();
     pioInit();
+    initBattery();
 
     otp = getOTPValues();
 

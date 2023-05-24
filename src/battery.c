@@ -31,6 +31,13 @@
 datetime_t                  dt;
 datetime_t                  alarm_dt;
 
+void initBattery() {
+    gpio_init(BATTERY_CHARGE_ENABLE);
+    gpio_set_dir(BATTERY_CHARGE_ENABLE, GPIO_OUT);
+
+    gpio_put(BATTERY_CHARGE_ENABLE, false);
+}
+
 void wakeUp(void) {
 	/*
 	** Enable the watchdog, it will reset the device in 100ms...
@@ -49,6 +56,17 @@ void taskBatteryMonitor(PTASKPARM p) {
     weather_packet_t *          pWeather;
     
     pWeather = getWeatherPacket();
+
+    /*
+    ** If the battery temperature is above critical, disable charging.
+    ** The charge enable input is active low, set it high to disable.
+    */
+    if (pWeather->rawBatteryTemperature > BATTERY_TEMPERATURE_CRITICAL) {
+        gpio_put(BATTERY_CHARGE_ENABLE, true);
+    }
+    else if (pWeather->rawBatteryTemperature < BATTERY_TEMPERATURE_CRITICAL) {
+        gpio_put(BATTERY_CHARGE_ENABLE, false);
+    }
 
     /* 
     ** If the battery voltage has dropped below critical,

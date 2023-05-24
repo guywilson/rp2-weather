@@ -23,6 +23,8 @@
 #define SCHED_CPU0_TRACE            11
 #define SCHED_CPU1_TRACE            12
 
+#define BATTERY_CHARGE_ENABLE       12
+
 #define ONBAORD_LED_PIN             PICO_DEFAULT_LED_PIN
 
 #endif
