@@ -6,9 +6,6 @@
 #define I2C_SDA_ALT_PIN				16
 #define I2C_SLK_ALT_PIN				17
 
-#define PWM_RAIN_GAUGE_PIN          14
-#define PWM_ANEMOMETER_PIN          15
-
 #define PIO_PIN_ANEMOMETER          18
 #define PIO_PIN_RAIN_GAUGE          13
 
@@ -20,10 +17,10 @@
 
 #define I2C0_POWER_PIN              11
 
-#define SCHED_CPU0_TRACE            11
-#define SCHED_CPU1_TRACE            12
-
 #define BATTERY_CHARGE_ENABLE       12
+
+#define SCHED_CPU0_TRACE            14
+#define SCHED_CPU1_TRACE            15
 
 #define ONBAORD_LED_PIN             PICO_DEFAULT_LED_PIN
 

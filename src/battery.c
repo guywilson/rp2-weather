@@ -144,8 +144,8 @@ void taskBatteryMonitor(PTASKPARM p) {
                 hw_clear_bits(&spi1_hw->cr1, SPI_SSPCR1_SSE_BITS);
 
                 gpio_put_masked(
-                    PWM_RAIN_GAUGE_PIN | 
-                    PWM_ANEMOMETER_PIN | 
+                    SCHED_CPU0_TRACE | 
+                    SCHED_CPU1_TRACE | 
                     NRF24L01_SPI_PIN_CE | 
                     NRF24L01_SPI_PIN_CSN | 
                     ONBAORD_LED_PIN | 
