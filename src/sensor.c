@@ -17,7 +17,6 @@
 #include "SHT4x.h"
 #include "icp10125.h"
 #include "ltr390.h"
-#include "veml7700.h"
 #include "lc709203.h"
 #include "nRF24L01.h"
 #include "utils.h"
@@ -44,7 +43,6 @@ int initSensors(i2c_inst_t * i2c) {
         tmp117_setup(i2c)   | 
         sht4x_setup(i2c)    | 
         icp10125_setup(i2c) | 
-        veml7700_setup(i2c) | 
         ltr390_setup(i2c)   | 
         lc709203_setup(i2c);
 }

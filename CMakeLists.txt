@@ -43,7 +43,6 @@ if (PICO_ON_DEVICE)
             src/TMP117.c
             src/SHT4X.c
             src/icp10125.c
-            src/veml7700.c
             src/ltr390.c
             src/lc709203.c
             src/nRF24L01.c
