@@ -129,7 +129,7 @@ void taskI2CSensor(PTASKPARM p) {
             memset(&pWeather->rawALS_UV[0], 0, 5);
             memcpy(&pWeather->rawALS_UV[0], buffer, 3);
 
-            input[0] = LTR390_CTRL_UVS_MODE_UVS;
+            input[0] = LTR390_CTRL_SENSOR_ENABLE | LTR390_CTRL_UVS_MODE_UVS;
             i2cWriteRegister(i2c0, LTR390_ADDRESS, LTR390_REG_CTRL, input, 1);
 
             delay = rtc_val_ms(1000);
@@ -143,11 +143,11 @@ void taskI2CSensor(PTASKPARM p) {
             i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_UVS_DATA1, &buffer[1], 1);
             i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_UVS_DATA2, &buffer[2], 1);
 
-            pWeather->rawALS_UV[2] |= ((buffer[2] << 4) & 0x0F);
+            pWeather->rawALS_UV[2] |= ((buffer[2] << 4) & 0xF0);
             pWeather->rawALS_UV[3] = buffer[1];
             pWeather->rawALS_UV[4] = buffer[0];
 
-            input[0] = LTR390_CTRL_UVS_MODE_ALS;
+            input[0] = LTR390_CTRL_SENSOR_ENABLE | LTR390_CTRL_UVS_MODE_ALS;
             i2cWriteRegister(i2c0, LTR390_ADDRESS, LTR390_REG_CTRL, input, 1);
 
             delay = rtc_val_ms(1000);

@@ -14,7 +14,7 @@ int ltr390_setup(i2c_inst_t * i2c) {
     ctrl = LTR390_CTRL_SENSOR_ENABLE | LTR390_CTRL_UVS_MODE_ALS;
     i2cWriteRegister(i2c, LTR390_ADDRESS, LTR390_REG_CTRL, &ctrl, 1);
 
-    measRate = LTR390_MEAS_RATE_20_BIT | LTR390_MEAS_RATE_100MS;
+    measRate = LTR390_MEAS_RATE_20_BIT | LTR390_MEAS_RATE_500MS;
     i2cWriteRegister(i2c, LTR390_ADDRESS, LTR390_REG_MEAS_RATE, &measRate, 1);
 
     gain = LTR390_GAIN_RANGE_18;
