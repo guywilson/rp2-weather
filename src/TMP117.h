@@ -1,10 +1,9 @@
 #include "scheduler.h"
 #include "hardware/i2c.h"
+#include "i2c_addr.h"
 
 #ifndef __INCL_I2CTASK
 #define __INCL_I2CTASK
-
-#define TMP117_ADDRESS                  0x48
 
 #define TMP117_REG_CONFIG               0x01
 #define TMP117_REG_TEMP                 0x00

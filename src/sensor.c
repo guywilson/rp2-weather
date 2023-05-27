@@ -7,9 +7,6 @@
 #include "hardware/i2c.h"
 #include "hardware/spi.h"
 #include "hardware/timer.h"
-#include "hardware/address_mapped.h"
-#include "hardware/regs/tbman.h"
-#include "hardware/regs/sysinfo.h"
 #include "scheduler.h"
 #include "taskdef.h"
 #include "logger.h"
@@ -19,6 +16,7 @@
 #include "TMP117.h"
 #include "SHT4x.h"
 #include "icp10125.h"
+#include "ltr390.h"
 #include "veml7700.h"
 #include "lc709203.h"
 #include "nRF24L01.h"
@@ -29,7 +27,8 @@
 #define STATE_READ_HUMIDITY_2       0x0201
 #define STATE_READ_PRESSURE_1       0x0300
 #define STATE_READ_PRESSURE_2       0x0301
-#define STATE_READ_LUX              0x0400
+#define STATE_READ_ALS              0x0400
+#define STATE_READ_UVS              0x0410
 #define STATE_READ_BATTERY_VOLTS    0x0500
 #define STATE_READ_BATTERY_PERCENT  0x0501
 #define STATE_READ_BATTERY_TEMP     0x0502
@@ -40,21 +39,14 @@
 static uint8_t              buffer[32];
 static char                 szBuffer[128];
 
-weather_packet_t * getWeatherPacket() {
-    static weather_packet_t     weather;
-
-    weather.packetID[0] = 'W';
-    weather.packetID[1] = 'P';
-    
-    return &weather;
-}
-
 int initSensors(i2c_inst_t * i2c) {
-    weather_packet_t *      pWeather = getWeatherPacket();
-
-    pWeather->chipID = * ((io_ro_32 *)(SYSINFO_BASE + SYSINFO_CHIP_ID_OFFSET));
-
-    return tmp117_setup(i2c) | sht4x_setup(i2c) | icp10125_setup(i2c) | veml7700_setup(i2c) | lc709203_setup(i2c);
+    return 
+        tmp117_setup(i2c)   | 
+        sht4x_setup(i2c)    | 
+        icp10125_setup(i2c) | 
+        veml7700_setup(i2c) | 
+        ltr390_setup(i2c)   | 
+        lc709203_setup(i2c);
 }
 
 void taskI2CSensor(PTASKPARM p) {
@@ -123,20 +115,40 @@ void taskI2CSensor(PTASKPARM p) {
                             ((uint32_t)buffer[4] << 8) | 
                             (uint32_t)buffer[6]);
 
-            state = STATE_READ_LUX;
+            state = STATE_READ_ALS;
             delay = rtc_val_ms(975);
             break;
 
-        case STATE_READ_LUX:
-            lgLogDebug("Rd L");
+        case STATE_READ_ALS:
+            lgLogDebug("Rd ALS");
 
-            i2cReadRegister(i2c0, VEML7700_ADDRESS, VEML7700_REG_ALS, buffer, 2);
+            i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_ALS_DATA0, &buffer[0], 1);
+            i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_ALS_DATA1, &buffer[1], 1);
+            i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_ALS_DATA2, &buffer[2], 1);
 
-            /*
-            ** The veml7700 seems to have the opposite response structure
-            ** to other sensors, i.e. LSB then MSB...
-            */
-            pWeather->rawLux = ((uint16_t)((((uint16_t)buffer[1]) << 8) | (uint16_t)buffer[0]));
+            memset(&pWeather->rawALS_UV[0], 0, 5);
+            memcpy(&pWeather->rawALS_UV[0], buffer, 3);
+
+            input[0] = LTR390_CTRL_UVS_MODE_UVS;
+            i2cWriteRegister(i2c0, LTR390_ADDRESS, LTR390_REG_CTRL, input, 1);
+
+            delay = rtc_val_ms(1000);
+            state = STATE_READ_UVS;
+            break;
+
+        case STATE_READ_UVS:
+            lgLogDebug("Rd UVS");
+
+            i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_UVS_DATA0, &buffer[0], 1);
+            i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_UVS_DATA1, &buffer[1], 1);
+            i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_UVS_DATA2, &buffer[2], 1);
+
+            pWeather->rawALS_UV[2] |= ((buffer[2] << 4) & 0x0F);
+            pWeather->rawALS_UV[3] = buffer[1];
+            pWeather->rawALS_UV[4] = buffer[0];
+
+            input[0] = LTR390_CTRL_UVS_MODE_ALS;
+            i2cWriteRegister(i2c0, LTR390_ADDRESS, LTR390_REG_CTRL, input, 1);
 
             delay = rtc_val_ms(1000);
             state = STATE_READ_BATTERY_VOLTS;

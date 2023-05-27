@@ -28,11 +28,10 @@ void taskWatchdog(PTASKPARM p) {
 void taskWatchdogWakeUp(PTASKPARM p) {
     static int          state = STATE_RADIO_TX_POWERUP;
     rtc_t               delay;
-    watchdog_packet_t   wp;
-    weather_packet_t *  pWeather;
+    watchdog_packet_t * pWatchdog;
     uint8_t             buffer[32];
 
-    pWeather = getWeatherPacket();
+    pWatchdog = getWatchdogPacket();
 
     switch (state) {
         case STATE_RADIO_TX_POWERUP:
@@ -43,12 +42,7 @@ void taskWatchdogWakeUp(PTASKPARM p) {
             break;
 
         case STATE_RADIO_TX_SEND:
-            wp.packetID[0] = 'W';
-            wp.packetID[1] = 'D';
-
-            wp.chipID = pWeather->chipID;
-
-            memcpy(buffer, &wp, sizeof(watchdog_packet_t));
+            memcpy(buffer, pWatchdog, sizeof(watchdog_packet_t));
             nRF24L01_transmit_buffer(spi0, buffer, sizeof(watchdog_packet_t), false);
             
             state = STATE_RADIO_TX_FINISH;

@@ -38,11 +38,13 @@ if (PICO_ON_DEVICE)
             src/pio_rp2040.c
             src/pwm_rp2040.c
             src/logger.c
+            src/packet.c
             src/sensor.c
             src/TMP117.c
             src/SHT4X.c
             src/icp10125.c
             src/veml7700.c
+            src/ltr390.c
             src/lc709203.c
             src/nRF24L01.c
             src/heartbeat.c

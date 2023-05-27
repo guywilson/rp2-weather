@@ -1,9 +1,9 @@
 #include <stdint.h>
 
+#include "i2c_addr.h"
+
 #ifndef __INCL_VEML7700
 #define __INCL_VEML7700
-
-#define VEML7700_ADDRESS                    0x10
 
 #define VEML7700_REG_CMD_ALS_CONF           0x00
 #define VEML7700_REG_CMD_ALS_HIGH_THRESHOLD 0x01

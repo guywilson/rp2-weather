@@ -1,7 +1,7 @@
+#include "i2c_addr.h"
+
 #ifndef __INCL_LC709203
 #define __INCL_LC709203
-
-#define LC709203_ADDRESS                    0x0B
 
 #define LC709203_CMD_BEFORE_RSOC            0x04
 #define LC709203_CMD_THERMISTOR_B           0x06

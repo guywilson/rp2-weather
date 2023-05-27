@@ -1,7 +1,7 @@
+#include "i2c_addr.h"
+
 #ifndef __INCL_SHT4X
 #define __INCL_SHT4X
-
-#define SHT4X_ADDRESS                               0x44
 
 #define SHT4X_CMD_MEASURE_HI_PRN                    0xFD
 #define SHT4X_CMD_MEASURE_MD_PRN                    0xF6

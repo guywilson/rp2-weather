@@ -52,10 +52,11 @@ void taskBatteryMonitor(PTASKPARM p) {
     static uint16_t             lastBatteryPct = 0;
     uint8_t                     buffer[32];
     rtc_t                       delay = rtc_val_sec(10);
-    sleep_packet_t              sleepPacket;
+    sleep_packet_t *            pSleep;
     weather_packet_t *          pWeather;
     
     pWeather = getWeatherPacket();
+    pSleep = getSleepPacket();
 
     /*
     ** If the battery temperature is above critical, disable charging.
@@ -107,16 +108,13 @@ void taskBatteryMonitor(PTASKPARM p) {
                 break;
 
             case STATE_RADIO_SEND_PACKET:
-                sleepPacket.packetID[0] = 'S';
-                sleepPacket.packetID[1] = 'P';
+                pSleep->rawBatteryTemperature = pWeather->rawBatteryTemperature;
+                pSleep->rawBatteryVolts = pWeather->rawBatteryVolts;
+                pSleep->sleepHours = 48;
 
-                sleepPacket.chipID = pWeather->chipID;
-                sleepPacket.rawBatteryTemperature = pWeather->rawBatteryTemperature;
-                sleepPacket.rawBatteryVolts = pWeather->rawBatteryVolts;
-                sleepPacket.rawLux = pWeather->rawLux;
-                sleepPacket.sleepHours = 48;
+                memcpy(&pSleep->rawALS_UV, pWeather->rawALS_UV, 5);
 
-                memcpy(buffer, &sleepPacket, sizeof(sleep_packet_t));
+                memcpy(buffer, pSleep, sizeof(sleep_packet_t));
                 nRF24L01_transmit_buffer(spi0, buffer, sizeof(sleep_packet_t), false);
                 
                 state = STATE_RADIO_FINISH;
