@@ -31,10 +31,26 @@
 #define PIO_ANEMOMETER_OFFSET                0
 #define PIO_RAIN_GAUGE_OFFSET               16
 
-#define PIO_ANEMOMETER_TASK_RUNS_PER_SEC    10
+#define PIO_ANEMOMETER_TASK_RUNS            50
 #define PIO_RAIN_GAUGE_TASK_RUNS_PER_HOUR   60
 
-static uint32_t         averageBuffer[16];
+/*
+** To calculate KPH:
+**
+** Anemometer circumference in km: pi * diameter = 0.0005654866776462
+** Rotations = pulse count / 2
+** Distance in km = circumference * rotations
+** kph = km * seconds per hr (3600) * anemometer factor (1.18) / time for each run (5 secs)
+**
+** The constant bit = circumference (0.0005654866776462) * 3600 * 1.18 / 5 * 2
+** But we alsoe multiply by 100 so we can put it in a uint16_t and simply
+** divide by 100 at the other end:
+**
+** = 24.0218740664089950
+*/
+#define ANEMOMETER_KPH_FACTOR               24.0218740664089950f
+
+static uint32_t         averageBuffer[64];
 static uint16_t         rainPulseBuffer[60];
 static uint             anemometerSM;
 static uint             rainGaugeSM;
@@ -83,6 +99,7 @@ void taskAnemometer(PTASKPARM p) {
     static uint32_t     pulseCount = 0;
     int                 i;
     uint32_t            totalCount = 0;
+    uint32_t            maxCount = 0;
     weather_packet_t *  pWeather;
 
     /*
@@ -97,23 +114,34 @@ void taskAnemometer(PTASKPARM p) {
     
     runCount++;
 
-    if (runCount == PIO_ANEMOMETER_TASK_RUNS_PER_SEC) {
+    if (runCount == PIO_ANEMOMETER_TASK_RUNS) {
         /*
-        ** Our pulse count equates to pulses/sec...
+        ** Our pulse count is number of pulses every 5 seconds...
         */
         averageBuffer[ix++] = pulseCount;
 
-        if (ix == 16) {
-            for (i = 0;i < 16;i++) {
+        if (ix == 64) {
+            for (i = 0;i < 64;i++) {
                 totalCount += averageBuffer[i];
+
+                /*
+                ** Get the largest (gust) count...
+                */
+                if (averageBuffer[i] > maxCount) {
+                    maxCount = averageBuffer[i];
+                }
             }
 
             pWeather = getWeatherPacket();
 
             /*
-            ** Get the average windspeed over 16 measurements (16 seconds)...
+            ** Get the average windspeed over 64 measurements (5 minutes, 20 seconds)...
             */
-            pWeather->rawWindspeed = (uint16_t)(totalCount >> 4);
+            pWeather->rawWindspeed = 
+                (uint16_t)(ANEMOMETER_KPH_FACTOR * (float)((uint16_t)(totalCount >> 6)));
+
+            pWeather->rawWindGust = 
+                (uint16_t)(ANEMOMETER_KPH_FACTOR * (float)maxCount);
 
             lgLogDebug("Avg windspeed count: %d", pWeather->rawWindspeed);
 

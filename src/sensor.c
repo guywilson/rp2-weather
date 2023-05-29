@@ -184,7 +184,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             lgLogDebug("BT: %.2f", ((float)pWeather->rawBatteryTemperature / 10.0) - 273.15);
 
-            delay = rtc_val_sec(20);
+            delay = rtc_val_ms(22600);
             state = STATE_SEND_BEGIN;
             break;
 

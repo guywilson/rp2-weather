@@ -78,15 +78,9 @@ void taskADC(PTASKPARM p) {
                         (channel << ADC_CS_AINSEL_LSB | ADC_CS_START_ONCE_BITS), 
                         (ADC_CS_AINSEL_BITS | ADC_CS_START_ONCE_BITS));
                 
-                channel++;
-
-                if (channel == 4) {
-                    channel = 2;
-
-                    delay = rtc_val_ms(1);
-                    state = STATE_ADC_ACCUMULATE;
-                    break;
-                }
+                delay = rtc_val_ms(1);
+                state = STATE_ADC_ACCUMULATE;
+                break;
             }
 
             delay = rtc_val_ms(1);
@@ -102,27 +96,7 @@ void taskADC(PTASKPARM p) {
                 channel = ADC_CHANNEL_WIND_DIR;
 
                 while (!adc_fifo_is_empty()) {
-                    switch (channel) {
-                        case ADC_CHANNEL_0_NOT_CONNECTED:
-                            break;
-
-                        case ADC_CHANNEL_1_NOT_CONNECTED:
-                            break;
-
-                        case ADC_CHANNEL_WIND_DIR:
-                            pSamples->adcWindDir = adc_fifo_get();
-                            break;
-
-                        case ADC_CHANNEL_BATTERY_VOLTAGE:
-                            pSamples->adcVSYSVoltage = adc_fifo_get();
-                            break;
-                    }
-
-                    channel++;
-
-                    if (channel == 4) {
-                        channel = 2;
-                    }
+                    pSamples->adcWindDir = adc_fifo_get();
                 }
 
                 sampleCount++;
@@ -154,12 +128,6 @@ void taskADC(PTASKPARM p) {
             pWeather->rawWindDir = sampleAvg >> 3;
             sampleAvg = 0;
 
-            for (i = 0;i < ADC_SAMPLE_BUFFER_SIZE;i++) {
-                sampleAvg += adcSamples[i].adcVSYSVoltage;
-            }
-            pWeather->rawVSYSVoltage = sampleAvg >> 3;
-            sampleAvg = 0;
-
             delay = rtc_val_sec(20);
             state = STATE_ADC_INIT;
             break;
@@ -177,12 +145,11 @@ void adcInit() {
     memset(adcSamples, 0, sizeof(adc_samples_t) * ADC_SAMPLE_BUFFER_SIZE);
 
     adc_gpio_init(28);
-    adc_gpio_init(29);
 
     adc_select_input(ADC_CHANNEL_WIND_DIR);
 
     adc_set_clkdiv(0.0f);
     
     adc_fifo_drain();
-    adc_fifo_setup(true, false, 2, false, false);
+    adc_fifo_setup(true, false, 1, false, false);
 }

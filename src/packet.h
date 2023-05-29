@@ -15,20 +15,20 @@ typedef struct {                                    // O/S  - Description
 
     uint16_t            chipID;                     // 0x01 - ID of the RP2040
 
-    uint16_t            rawWindDir;                 // 0x02 - Raw ADC wind direction
-    uint16_t            rawVSYSVoltage;             // 0x04 - Raw ADC VSYS input voltage
+    uint16_t            rawWindDir;                 // 0x03 - Raw ADC wind direction
 
-    int16_t             rawTemperature;             // 0x06 - Raw I2C TMP117 value
-    uint32_t            rawICPPressure;             // 0x08 - Raw pressure from icp10125
-    uint16_t            rawICPTemperature;          // 0x0C - Raw temperature from icp10125
-    uint16_t            rawHumidity;                // 0x0E - Raw I2C SHT4x value
-    uint8_t             rawALS_UV[5];               // 0x10 - Raw I2C LTR390 ALS & UV value
-    uint16_t            rawBatteryVolts;            // 0x15 - Raw I2C value for battery V
-    uint16_t            rawBatteryPercentage;       // 0x17 - Raw I2C value for battery %
-    uint16_t            rawBatteryTemperature;      // 0x19 - Raw I2C value for battery temp
+    int16_t             rawTemperature;             // 0x05 - Raw I2C TMP117 value
+    uint32_t            rawICPPressure;             // 0x07 - Raw pressure from icp10125
+    uint16_t            rawICPTemperature;          // 0x0B - Raw temperature from icp10125
+    uint16_t            rawHumidity;                // 0x0D - Raw I2C SHT4x value
+    uint8_t             rawALS_UV[5];               // 0x0F - Raw I2C LTR390 ALS & UV value
+    uint16_t            rawBatteryVolts;            // 0x14 - Raw I2C value for battery V
+    uint16_t            rawBatteryPercentage;       // 0x16 - Raw I2C value for battery %
+    uint16_t            rawBatteryTemperature;      // 0x18 - Raw I2C value for battery temp
 
-    uint16_t            rawRainfall;                // 0x1B - Raw rain sensor count
-    uint16_t            rawWindspeed;               // 0x1D - Raw anemometer count
+    uint16_t            rawRainfall;                // 0x1A - Raw rain sensor count
+    uint16_t            rawWindspeed;               // 0x1C - Raw wind speed
+    uint16_t            rawWindGust;                // 0x1E - Raw wind gust speed
 }
 weather_packet_t;
 
