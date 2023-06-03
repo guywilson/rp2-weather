@@ -65,7 +65,7 @@ void taskBatteryMonitor(PTASKPARM p) {
     if (pWeather->rawBatteryTemperature > BATTERY_TEMPERATURE_CRITICAL) {
         gpio_put(BATTERY_CHARGE_ENABLE, true);
     }
-    else if (pWeather->rawBatteryTemperature < BATTERY_TEMPERATURE_CRITICAL) {
+    else if (pWeather->rawBatteryTemperature < BATTERY_TEMPERATURE_LIMIT) {
         gpio_put(BATTERY_CHARGE_ENABLE, false);
     }
 
