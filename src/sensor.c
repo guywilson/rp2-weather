@@ -155,7 +155,10 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_BATTERY_VOLTS:
             lgLogDebug("Rd BV");
             if (lc709203_read_register(i2c0, LC709203_CMD_CELL_VOLTAGE, &pWeather->rawBatteryVolts)) {
-                lgLogError("LC CRC fail");
+                lgLogError("LC CRC fail - retrying");
+
+                delay = rtc_val_ms(1);
+                break;
             }
 
             lgLogDebug("BV: %.2f", (float)pWeather->rawBatteryVolts / 1000.0);
@@ -167,7 +170,10 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_BATTERY_PERCENT:
             lgLogDebug("Rd BP");
             if (lc709203_read_register(i2c0, LC709203_CMD_ITE, &pWeather->rawBatteryPercentage)) {
-                lgLogError("LC CRC fail");
+                lgLogError("LC CRC fail - retrying");
+
+                delay = rtc_val_ms(1);
+                break;
             }
 
             lgLogDebug("BP: %.2f", (float)pWeather->rawBatteryPercentage / 10.0);
@@ -179,7 +185,10 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_BATTERY_TEMP:
             lgLogDebug("Rd BT");
             if (lc709203_read_register(i2c0, LC709203_CMD_CELL_TEMERATURE, &pWeather->rawBatteryTemperature)) {
-                lgLogError("LC CRC fail");
+                lgLogError("LC CRC fail - retrying");
+
+                delay = rtc_val_ms(1);
+                break;
             }
 
             lgLogDebug("BT: %.2f", ((float)pWeather->rawBatteryTemperature / 10.0) - 273.15);
