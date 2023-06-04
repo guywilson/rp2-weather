@@ -6,18 +6,27 @@
 #include "i2c_rp2040.h"
 #include "lc709203.h"
 #include "utils.h"
+#include "logger.h"
+
+#define LC709203_CRC_POLYNOMIAL                 0x07
+
 
 static uint8_t compute_crc8(uint8_t * data, int length) {
-    const uint8_t     POLYNOMIAL = 0x07;
-    uint8_t           crc = 0x00;
-    int               i;
-    int               j;
+    const uint8_t       polynomial = LC709203_CRC_POLYNOMIAL;
+    uint8_t             crc = 0x00;
+    int                 i;
+    int                 j;
 
-    for (j = length; j; --j) {
-        crc ^= *data++;
+    for (j = 0;j < length;j++) {
+        crc ^= data[i];
 
-        for (i = 8; i; --i) {
-            crc = (crc & 0x80) ? (crc << 1) ^ POLYNOMIAL : (crc << 1);
+        for (i = 0;i < 8;i++) {
+            if ((crc & 0x80) != 0x00) {
+                crc = ((crc << 1) ^ polynomial);
+            }
+            else {
+                crc = (crc << 1);
+            }
         }
     }
 
@@ -44,17 +53,19 @@ int lc709203_read_register(i2c_inst_t * i2c, uint8_t reg, uint16_t * data) {
 
     i2cReadRegister(i2c, LC709203_ADDRESS, reg, &buffer[3], 3);
 
-    buffer[0] = LC709203_ADDRESS << 1;
+    buffer[0] = (LC709203_ADDRESS << 1);
     buffer[1] = reg;
     buffer[2] = buffer[0] | 0x01;
 
     crc = compute_crc8(buffer, 5);
 
+    lgLogDebug("LC709203 CRC[c]: 0x%02X, [a]: 0x%02X", crc, buffer[5]);
+
+    *data = ((uint16_t)((((uint16_t)buffer[4]) << 8) | (uint16_t)buffer[3]));
+
     if (crc != buffer[5]) {
         return -1;
     }
-
-    *data = ((uint16_t)((((uint16_t)buffer[4]) << 8) | (uint16_t)buffer[3]));
 
     return 0;
 }

@@ -31,8 +31,11 @@
 #define PIO_ANEMOMETER_OFFSET                0
 #define PIO_RAIN_GAUGE_OFFSET               16
 
+#define PIO_AVG_BUFFER_SIZE                 64
+#define PIO_RAIN_PULSE_BUFFER_SIZE          60
+
 #define PIO_ANEMOMETER_TASK_RUNS            50
-#define PIO_RAIN_GAUGE_TASK_RUNS_PER_HOUR   60
+#define PIO_RAIN_GAUGE_TASK_RUNS_PER_HOUR   PIO_RAIN_PULSE_BUFFER_SIZE
 
 /*
 ** To calculate KPH:
@@ -50,8 +53,9 @@
 */
 #define ANEMOMETER_KPH_FACTOR               24.0218740664089950f
 
-static uint32_t         averageBuffer[64];
-static uint16_t         rainPulseBuffer[60];
+
+static uint32_t         averageBuffer[PIO_AVG_BUFFER_SIZE];
+static uint16_t         rainPulseBuffer[PIO_RAIN_PULSE_BUFFER_SIZE];
 static uint             anemometerSM;
 static uint             rainGaugeSM;
 
@@ -120,8 +124,8 @@ void taskAnemometer(PTASKPARM p) {
         */
         averageBuffer[ix++] = pulseCount;
 
-        if (ix == 64) {
-            for (i = 0;i < 64;i++) {
+        if (ix == PIO_AVG_BUFFER_SIZE) {
+            for (i = 0;i < PIO_AVG_BUFFER_SIZE;i++) {
                 totalCount += averageBuffer[i];
 
                 /*
@@ -173,13 +177,13 @@ void taskRainGuage(PTASKPARM p) {
                                         RAIN_GAUGE_PULSE_COUNT_BIT_SHIFT);
     pio_sm_clear_fifos(pio0, rainGaugeSM);
 
-    for (i = 0;i < PIO_RAIN_GAUGE_TASK_RUNS_PER_HOUR;i++) {
+    for (i = 0;i < PIO_RAIN_PULSE_BUFFER_SIZE;i++) {
         pulsesPerHour += rainPulseBuffer[i];
     }
         
     pWeather->rawRainfall = pulsesPerHour;
     
-    if (ix == PIO_RAIN_GAUGE_TASK_RUNS_PER_HOUR) {
+    if (ix == PIO_RAIN_PULSE_BUFFER_SIZE) {
         ix = 0;
     }
 
