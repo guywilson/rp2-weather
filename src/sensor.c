@@ -120,9 +120,7 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_ALS:
             lgLogDebug("Rd ALS");
 
-            i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_ALS_DATA0, &buffer[0], 1);
-            i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_ALS_DATA1, &buffer[1], 1);
-            i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_ALS_DATA2, &buffer[2], 1);
+            i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_ALS_DATA0, buffer, 3);
 
             memset(&pWeather->rawALS_UV[0], 0, 5);
             memcpy(&pWeather->rawALS_UV[0], buffer, 3);
@@ -137,9 +135,7 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_UVS:
             lgLogDebug("Rd UVS");
 
-            i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_UVS_DATA0, &buffer[0], 1);
-            i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_UVS_DATA1, &buffer[1], 1);
-            i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_UVS_DATA2, &buffer[2], 1);
+            i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_UVS_DATA0, buffer, 3);
 
             pWeather->rawALS_UV[2] |= ((buffer[2] << 4) & 0xF0);
             pWeather->rawALS_UV[3] = buffer[1];
