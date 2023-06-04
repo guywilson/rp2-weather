@@ -18,7 +18,7 @@ static uint8_t compute_crc8(uint8_t * data, int length) {
     int                 j;
 
     for (j = 0;j < length;j++) {
-        crc ^= data[i];
+        crc ^= data[j];
 
         for (i = 0;i < 8;i++) {
             if ((crc & 0x80) != 0x00) {
