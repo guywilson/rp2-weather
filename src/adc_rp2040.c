@@ -9,7 +9,8 @@
 #include "rtc_rp2040.h"
 #include "scheduler.h"
 #include "taskdef.h"
-#include "sensor.h"
+#include "packet.h"
+#include "logger.h"
 
 #define ADC_SAMPLE_BUFFER_SIZE                  8
 
@@ -46,13 +47,25 @@
 **
 */
 
+const char *    dir_ordinal[16] = {
+                    "ESE", "ENE", "E", "SSE", 
+                    "SE", "SSW", "S", "NNE", 
+                    "NE", "WSW", "SW", "NNW", 
+                    "N", "NWN", "NW", "W"};
+
+const uint16_t  dir_adc_min[17] = {
+                    450, 593, 686, 832, 
+                    1126, 1473, 1749, 2123, 
+                    2496, 2838, 3120, 3269, 
+                    3479, 3635, 3752, 3881, 4095};
+
 adc_samples_t           adcSamples[ADC_SAMPLE_BUFFER_SIZE];
 
 void taskADC(PTASKPARM p) {
-    static uint                 channel = ADC_CHANNEL_WIND_DIR;
     static int                  sampleCount = 0;
     static int                  state = STATE_ADC_INIT;
     int                         i;
+    int                         j;
     uint16_t                    sampleAvg;
     rtc_t                       delay;
     weather_packet_t *          pWeather;
@@ -65,8 +78,6 @@ void taskADC(PTASKPARM p) {
                     ADC_CS_EN_BITS, 
                     ADC_CS_EN_BITS);
 
-            channel = ADC_CHANNEL_WIND_DIR;
-
             delay = rtc_val_ms(1);
             state = STATE_ADC_RUN;
             break;
@@ -75,7 +86,7 @@ void taskADC(PTASKPARM p) {
             if (adc_hw->cs & ADC_CS_READY_BITS) {
                 hw_write_masked(
                         &adc_hw->cs, 
-                        (channel << ADC_CS_AINSEL_LSB | ADC_CS_START_ONCE_BITS), 
+                        (ADC_CHANNEL_WIND_DIR << ADC_CS_AINSEL_LSB | ADC_CS_START_ONCE_BITS), 
                         (ADC_CS_AINSEL_BITS | ADC_CS_START_ONCE_BITS));
                 
                 delay = rtc_val_ms(1);
@@ -89,11 +100,6 @@ void taskADC(PTASKPARM p) {
         case STATE_ADC_ACCUMULATE:
             if (adc_hw->intr & 0x00000001) {
                 pSamples = &adcSamples[sampleCount];
-
-                /*
-                ** The first sample in our FIFO will be from channel 2...
-                */
-                channel = ADC_CHANNEL_WIND_DIR;
 
                 while (!adc_fifo_is_empty()) {
                     pSamples->adcWindDir = adc_fifo_get();
@@ -128,7 +134,15 @@ void taskADC(PTASKPARM p) {
             pWeather->rawWindDir = sampleAvg >> 3;
             sampleAvg = 0;
 
-            delay = rtc_val_sec(20);
+            lgLogDebug("Raw dir: %d", (int)pWeather->rawWindDir);
+            for (j = 0;j < 16;j++) {
+                if (pWeather->rawWindDir >= dir_adc_min[j] && pWeather->rawWindDir < dir_adc_min[j + 1]) {
+                    lgLogDebug("Wind dir: %s", dir_ordinal[j]);
+                    break;
+                }
+            }
+
+            delay = rtc_val_sec(5);
             state = STATE_ADC_INIT;
             break;
     }

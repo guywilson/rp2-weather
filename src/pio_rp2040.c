@@ -53,6 +53,11 @@
 */
 #define ANEMOMETER_KPH_FACTOR               24.0218740664089950f
 
+/*
+** Wind speed in mph:
+*/
+#define ANEMOMETER_MPH              0.0062137119223733f
+
 
 static uint32_t         averageBuffer[PIO_AVG_BUFFER_SIZE];
 static uint16_t         rainPulseBuffer[PIO_RAIN_PULSE_BUFFER_SIZE];
@@ -146,6 +151,8 @@ void taskAnemometer(PTASKPARM p) {
 
             pWeather->rawWindGust = 
                 (uint16_t)(ANEMOMETER_KPH_FACTOR * (float)maxCount);
+
+            lgLogDebug("Spd:%.2f, Gst:%.2f", (float)pWeather->rawWindspeed * ANEMOMETER_MPH, (float)pWeather->rawWindGust * ANEMOMETER_MPH);
 
             lgLogDebug("Avg windspeed count: %d", pWeather->rawWindspeed);
 

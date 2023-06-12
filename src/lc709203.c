@@ -4,6 +4,7 @@
 
 #include "hardware/i2c.h"
 #include "i2c_rp2040.h"
+#include "rtc_rp2040.h"
 #include "lc709203.h"
 #include "utils.h"
 #include "logger.h"
@@ -68,6 +69,10 @@ int lc709203_read_register(i2c_inst_t * i2c, uint8_t reg, uint16_t * data) {
     }
 
     return 0;
+}
+
+void lc709203_reset(i2c_inst_t * i2c) {
+    lc709203_write_register(i2c, LC709203_CMD_COTP, 0x0001);
 }
 
 int lc709203_setup(i2c_inst_t * i2c) {

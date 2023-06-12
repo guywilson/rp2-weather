@@ -73,17 +73,11 @@ void taskBatteryMonitor(PTASKPARM p) {
     ** If the battery voltage has dropped below critical,
     ** stop everything and put the RP2040 to sleep...
     */
-    // if (runCount > 6) {
-    //     if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_CRITICAL && lastBatteryPct < BATTERY_PERCENTAGE_CRITICAL) {
-    //         doSleep = true;
-    //     }
-    // }
-    // else if (runCount == 6) {
-    //     /*
-    //     ** For debugging, sleep after 60 seconds
-    //     */
-    //     doSleep = true;
-    // }
+    if (runCount > 6) {
+        if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_CRITICAL && lastBatteryPct < BATTERY_PERCENTAGE_CRITICAL) {
+            doSleep = true;
+        }
+    }
 
     lastBatteryPct = pWeather->rawBatteryPercentage;
     

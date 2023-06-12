@@ -35,6 +35,8 @@
 #define STATE_SEND_FINISH           0x0701
 #define STATE_SEND_PACKET           0x07FF
 
+#define CRC_FAIL_COUNT_LIMIT        3
+
 static uint8_t              buffer[32];
 static char                 szBuffer[128];
 
@@ -49,6 +51,8 @@ int initSensors(i2c_inst_t * i2c) {
 
 void taskI2CSensor(PTASKPARM p) {
     static int          state = STATE_READ_TEMP;
+    static int          crcFailCount = 0;
+    static bool         isCRCReset = false;
     int                 i;
     int                 count = 0;
     uint8_t             input[2];
@@ -149,11 +153,32 @@ void taskI2CSensor(PTASKPARM p) {
             break;
 
         case STATE_READ_BATTERY_VOLTS:
+            if (isCRCReset) {
+                lc709203_setup(i2c0);
+                isCRCReset = false;
+            }
+
             lgLogDebug("Rd BV");
             if (lc709203_read_register(i2c0, LC709203_CMD_CELL_VOLTAGE, &pWeather->rawBatteryVolts)) {
+                crcFailCount++;
+
+                if (crcFailCount == CRC_FAIL_COUNT_LIMIT) {
+                    crcFailCount = 0;
+
+                    lc709203_reset(i2c0);
+
+                    isCRCReset = true;
+                    
+                    /*
+                    ** Initialisation time is 90ms...
+                    */
+                    delay = rtc_val_ms(90);
+                    break;
+                }
+
                 lgLogError("LC CRC fail - retrying");
 
-                delay = rtc_val_ms(1);
+                delay = rtc_val_ms(50);
                 break;
             }
 
@@ -164,11 +189,32 @@ void taskI2CSensor(PTASKPARM p) {
             break;
 
         case STATE_READ_BATTERY_PERCENT:
+            if (isCRCReset) {
+                lc709203_setup(i2c0);
+                isCRCReset = false;
+            }
+
             lgLogDebug("Rd BP");
             if (lc709203_read_register(i2c0, LC709203_CMD_ITE, &pWeather->rawBatteryPercentage)) {
+                crcFailCount++;
+
+                if (crcFailCount == CRC_FAIL_COUNT_LIMIT) {
+                    crcFailCount = 0;
+
+                    lc709203_reset(i2c0);
+
+                    isCRCReset = true;
+                    
+                    /*
+                    ** Initialisation time is 90ms...
+                    */
+                    delay = rtc_val_ms(90);
+                    break;
+                }
+
                 lgLogError("LC CRC fail - retrying");
 
-                delay = rtc_val_ms(1);
+                delay = rtc_val_ms(50);
                 break;
             }
 
@@ -179,11 +225,32 @@ void taskI2CSensor(PTASKPARM p) {
             break;
 
         case STATE_READ_BATTERY_TEMP:
+            if (isCRCReset) {
+                lc709203_setup(i2c0);
+                isCRCReset = false;
+            }
+
             lgLogDebug("Rd BT");
             if (lc709203_read_register(i2c0, LC709203_CMD_CELL_TEMERATURE, &pWeather->rawBatteryTemperature)) {
+                crcFailCount++;
+
+                if (crcFailCount == CRC_FAIL_COUNT_LIMIT) {
+                    crcFailCount = 0;
+
+                    lc709203_reset(i2c0);
+
+                    isCRCReset = true;
+                    
+                    /*
+                    ** Initialisation time is 90ms...
+                    */
+                    delay = rtc_val_ms(90);
+                    break;
+                }
+
                 lgLogError("LC CRC fail - retrying");
 
-                delay = rtc_val_ms(1);
+                delay = rtc_val_ms(50);
                 break;
             }
 
