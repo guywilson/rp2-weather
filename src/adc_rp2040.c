@@ -53,11 +53,11 @@ const char *    dir_ordinal[16] = {
                     "NE", "WSW", "SW", "NNW", 
                     "N", "NWN", "NW", "W"};
 
-const uint16_t  dir_adc_min[17] = {
-                    450, 593, 686, 832, 
-                    1126, 1473, 1749, 2123, 
-                    2496, 2838, 3120, 3269, 
-                    3479, 3635, 3752, 3881, 4095};
+const uint16_t  dir_adc_max[16] = {
+                    63,   82,   91,  128,
+                   196,  274,  336,  538,
+                   651, 1013, 1113, 1392,
+                  1808, 2071, 2542, 3149};
 
 adc_samples_t           adcSamples[ADC_SAMPLE_BUFFER_SIZE];
 
@@ -136,7 +136,7 @@ void taskADC(PTASKPARM p) {
 
             lgLogDebug("Raw dir: %d", (int)pWeather->rawWindDir);
             for (j = 0;j < 16;j++) {
-                if (pWeather->rawWindDir >= dir_adc_min[j] && pWeather->rawWindDir < dir_adc_min[j + 1]) {
+                if (pWeather->rawWindDir < dir_adc_max[j]) {
                     lgLogDebug("Wind dir: %s", dir_ordinal[j]);
                     break;
                 }
