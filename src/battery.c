@@ -31,6 +31,10 @@
 datetime_t                  dt;
 datetime_t                  alarm_dt;
 
+static void setChargeState(bool isEnabled) {
+    gpio_put(BATTERY_CHARGE_ENABLE, !isEnabled);
+}
+
 void initBattery() {
     gpio_init(BATTERY_CHARGE_ENABLE);
     gpio_set_dir(BATTERY_CHARGE_ENABLE, GPIO_OUT);
@@ -60,13 +64,12 @@ void taskBatteryMonitor(PTASKPARM p) {
 
     /*
     ** If the battery temperature is above critical, disable charging.
-    ** The charge enable input is active low, set it high to disable.
     */
     if (pWeather->rawBatteryTemperature > BATTERY_TEMPERATURE_CRITICAL) {
-        gpio_put(BATTERY_CHARGE_ENABLE, true);
+        setChargeState(false);
     }
     else if (pWeather->rawBatteryTemperature < BATTERY_TEMPERATURE_LIMIT) {
-        gpio_put(BATTERY_CHARGE_ENABLE, false);
+        setChargeState(true);
     }
 
     /* 

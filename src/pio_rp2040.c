@@ -102,6 +102,31 @@ void pioInit() {
     pio_sm_set_enabled(pio0, rainGaugeSM, true);
 }
 
+/*
+** Python example from: 
+** https://github.com/raspberrypilearning/build-your-own-weather-station/
+** 
+** interval = 300
+**
+** while True:
+**     start_time = time.time()
+**     while time.time() - start_time <= interval:
+**         wind_start_time = time.time()
+**         reset_wind()
+**         #time.sleep(wind_interval)
+**         while time.time() - wind_start_time <= wind_interval:
+**                 store_directions.append(wind_direction_byo.get_value())
+** 
+**         final_speed = calculate_speed(wind_interval)
+**         store_speeds.append(final_speed)
+**     wind_average = wind_direction_byo.get_average(store_directions)
+** 
+**     wind_gust = max(store_speeds)
+**     wind_speed = statistics.mean(store_speeds)
+**     print(wind_speed, wind_gust, wind_average)
+**     store_speeds = []
+**     store_directions =[]
+*/
 void taskAnemometer(PTASKPARM p) {
     static int          ix = 0;
     static int          runCount = 0;
@@ -155,6 +180,9 @@ void taskAnemometer(PTASKPARM p) {
             lgLogDebug("Spd:%.2f, Gst:%.2f", (float)pWeather->rawWindspeed * ANEMOMETER_MPH, (float)pWeather->rawWindGust * ANEMOMETER_MPH);
 
             lgLogDebug("Avg windspeed count: %d", pWeather->rawWindspeed);
+
+            memset(averageBuffer, 0, sizeof(uint32_t) * PIO_AVG_BUFFER_SIZE);
+            totalCount = 0;
 
             ix = 0;
         }
