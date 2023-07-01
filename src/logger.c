@@ -23,7 +23,6 @@ struct _log_handle_t {
 static log_handle_t         _log;
 static char                 _logBuffer[LOG_BUFFER_LENGTH];
 static char                 _logBufferOut[LOG_BUFFER_LENGTH];
-extern rtc_t                _realTimeClock;
 
 static log_handle_t * lgGetHandle() {
     static log_handle_t *       pLog = NULL;
@@ -45,7 +44,7 @@ static int _log_message(log_handle_t * hlog, int logLevel, bool addCR, const cha
         }
 
         if (addCR) {
-            sprintf(_logBuffer, "[%010d] ", _realTimeClock);
+            sprintf(_logBuffer, "[%010d] ", getRTCClock());
 
             switch (logLevel) {
                 case LOG_LEVEL_DEBUG:

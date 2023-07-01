@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
 #include "scheduler.h"
@@ -16,13 +17,20 @@
 #define STATE_RADIO_TX_SEND                 0x0200
 #define STATE_RADIO_TX_FINISH               0x0300
 
+static bool         doUpdate = true;
 
 void watchdog_disable(void) {
 	hw_clear_bits(&watchdog_hw->ctrl, WATCHDOG_CTRL_ENABLE_BITS);
 }
 
+void triggerWatchdogReset(void) {
+    doUpdate = false;
+}
+
 void taskWatchdog(PTASKPARM p) {
-    watchdog_update();
+    if (doUpdate) {
+        watchdog_update();
+    }
 }
 
 void taskWatchdogWakeUp(PTASKPARM p) {

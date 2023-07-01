@@ -41,12 +41,19 @@ static uint8_t              buffer[32];
 static char                 szBuffer[128];
 
 int initSensors(i2c_inst_t * i2c) {
-    return 
-        tmp117_setup(i2c)   | 
-        sht4x_setup(i2c)    | 
-        icp10125_setup(i2c) | 
-        ltr390_setup(i2c)   | 
-        lc709203_setup(i2c);
+    int         rtn = 0;
+
+    i2c_bus_init(i2c, 5);
+
+    i2c_bus_register_device(i2c, TMP117_ADDRESS, &tmp117_setup);
+    i2c_bus_register_device(i2c, SHT4X_ADDRESS, &sht4x_setup);
+    i2c_bus_register_device(i2c, ICP10125_ADDRESS, &icp10125_setup);
+    i2c_bus_register_device(i2c, LTR390_ADDRESS, &ltr390_setup);
+    i2c_bus_register_device(i2c, LC709203_ADDRESS, &lc709203_setup);
+
+    rtn = i2c_bus_setup(i2c);
+
+    return rtn;
 }
 
 void taskI2CSensor(PTASKPARM p) {
@@ -55,6 +62,7 @@ void taskI2CSensor(PTASKPARM p) {
     static bool         isCRCReset = false;
     int                 i;
     int                 count = 0;
+    int                 i2cError;
     uint8_t             input[2];
     weather_packet_t *  pWeather = getWeatherPacket();
     rtc_t               delay;
@@ -63,7 +71,7 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_TEMP:
             lgLogDebug("Rd T");
 
-            i2cReadRegister(i2c0, TMP117_ADDRESS, TMP117_REG_TEMP, buffer, 2);
+            i2cError = i2cReadRegister(i2c0, TMP117_ADDRESS, TMP117_REG_TEMP, buffer, 2);
 
             pWeather->rawTemperature = copyI2CReg_int16(buffer);
 
@@ -76,7 +84,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             input[0] = SHT4X_CMD_MEASURE_HI_PRN;
 
-            i2c_write_blocking(i2c0, SHT4X_ADDRESS, input, 1, true);
+            i2cWriteTimeoutProtected(i2c0, SHT4X_ADDRESS, input, 1, true);
 
             state = STATE_READ_HUMIDITY_2;
             delay = rtc_val_ms(12);
@@ -85,7 +93,7 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_HUMIDITY_2:
             lgLogDebug("Rd H2");
 
-            i2c_read_blocking(i2c0, SHT4X_ADDRESS, buffer, 6, false);
+            i2cReadTimeoutProtected(i2c0, SHT4X_ADDRESS, buffer, 6, false);
 
             pWeather->rawHumidity = copyI2CReg_uint16(&buffer[3]);
 
@@ -99,7 +107,7 @@ void taskI2CSensor(PTASKPARM p) {
             input[0] = 0x70;
             input[1] = 0xDF;
 
-            i2c_write_blocking(i2c0, ICP10125_ADDRESS, input, 2, false);
+            i2cWriteTimeoutProtected(i2c0, ICP10125_ADDRESS, input, 2, false);
 
             state = STATE_READ_PRESSURE_2;
             delay = rtc_val_ms(25);
@@ -108,7 +116,7 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_PRESSURE_2:
             lgLogDebug("Rd P2");
             
-            i2c_read_blocking(i2c0, ICP10125_ADDRESS, buffer, 9, false);
+            i2cReadTimeoutProtected(i2c0, ICP10125_ADDRESS, buffer, 9, false);
 
             pWeather->rawICPTemperature = copyI2CReg_uint16(buffer);
 
@@ -195,7 +203,7 @@ void taskI2CSensor(PTASKPARM p) {
             }
 
             lgLogDebug("Rd BP");
-            if (lc709203_read_register(i2c0, LC709203_CMD_ITE, &pWeather->rawBatteryPercentage)) {
+            if (lc709203_read_register(i2c0, LC709203_CMD_ITE, &pWeather->rawBatteryPercentage) == PICO_ERROR_GENERIC) {
                 crcFailCount++;
 
                 if (crcFailCount == CRC_FAIL_COUNT_LIMIT) {

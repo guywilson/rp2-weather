@@ -14,8 +14,8 @@ int tmp117_setup(i2c_inst_t * i2c) {
 
     error = i2cReadRegister(i2c, TMP117_ADDRESS, TMP117_REG_DEVICE_ID, deviceIDValue, 2);
 
-    if (error < 0) {
-        return error;
+    if (error == PICO_ERROR_TIMEOUT) {
+        return PICO_ERROR_TIMEOUT;
     }
     else {
         deviceID = ((uint16_t)deviceIDValue[0]) << 8 | (uint16_t)deviceIDValue[1];
@@ -32,12 +32,10 @@ int tmp117_setup(i2c_inst_t * i2c) {
     configData[1] = 0xA0;
     error = i2cWriteRegister(i2c0, TMP117_ADDRESS, TMP117_REG_CONFIG, configData, 2);
 
-    if (error == PICO_ERROR_GENERIC) {
-        return -1;
+    if (error == PICO_ERROR_TIMEOUT) {
+        return PICO_ERROR_TIMEOUT;
     }
-    else if (error == PICO_ERROR_TIMEOUT) {
-        return -1;
+    else {
+        return error; 
     }
-
-    return 0;
 }

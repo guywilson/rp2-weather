@@ -43,16 +43,19 @@ int lc709203_write_register(i2c_inst_t * i2c, uint8_t reg, uint16_t data) {
     buffer[3] = (data >> 8) & 0x00FF;
     buffer[4] = compute_crc8(buffer, 4);
 
-    i2cWriteRegister(i2c, LC709203_ADDRESS, reg, &buffer[2], 3);
-
-    return 0;
+    return i2cWriteRegister(i2c, LC709203_ADDRESS, reg, &buffer[2], 3);
 }
 
 int lc709203_read_register(i2c_inst_t * i2c, uint8_t reg, uint16_t * data) {
     uint8_t             buffer[8];
     uint8_t             crc;
+    int                 error;
 
-    i2cReadRegister(i2c, LC709203_ADDRESS, reg, &buffer[3], 3);
+    error = i2cReadRegister(i2c, LC709203_ADDRESS, reg, &buffer[3], 3);
+
+    if (error == PICO_ERROR_TIMEOUT) {
+        return PICO_ERROR_TIMEOUT;
+    }
 
     buffer[0] = (LC709203_ADDRESS << 1);
     buffer[1] = reg;
@@ -65,7 +68,7 @@ int lc709203_read_register(i2c_inst_t * i2c, uint8_t reg, uint16_t * data) {
     *data = ((uint16_t)((((uint16_t)buffer[4]) << 8) | (uint16_t)buffer[3]));
 
     if (crc != buffer[5]) {
-        return -1;
+        return PICO_ERROR_GENERIC;
     }
 
     return 0;
@@ -76,12 +79,43 @@ void lc709203_reset(i2c_inst_t * i2c) {
 }
 
 int lc709203_setup(i2c_inst_t * i2c) {
-    lc709203_write_register(i2c, LC709203_CMD_IC_POWER_MODE, 0x0001);
-    lc709203_write_register(i2c, LC709203_CMD_APA, 0x003C);
-    lc709203_write_register(i2c, LC709203_CMD_COTP, 0x0001);
-    lc709203_write_register(i2c, LC709203_CMD_STATUS_BIT, 0x0001);
-    lc709203_write_register(i2c, LC709203_CMD_THERMISTOR_B, THERMISTOR_B_VALUE);
-    lc709203_write_register(i2c, LC709203_CMD_ALARM_LOW_CELL_VOLTAGE, 3450);
+    int         error;
+
+    error = lc709203_write_register(i2c, LC709203_CMD_IC_POWER_MODE, 0x0001);
+
+    if (error == PICO_ERROR_TIMEOUT) {
+        return PICO_ERROR_TIMEOUT;
+    }
+
+    error = lc709203_write_register(i2c, LC709203_CMD_APA, 0x003C);
+
+    if (error == PICO_ERROR_TIMEOUT) {
+        return PICO_ERROR_TIMEOUT;
+    }
+
+    error = lc709203_write_register(i2c, LC709203_CMD_COTP, 0x0001);
+
+    if (error == PICO_ERROR_TIMEOUT) {
+        return PICO_ERROR_TIMEOUT;
+    }
+
+    error = lc709203_write_register(i2c, LC709203_CMD_STATUS_BIT, 0x0001);
+
+    if (error == PICO_ERROR_TIMEOUT) {
+        return PICO_ERROR_TIMEOUT;
+    }
+
+    error = lc709203_write_register(i2c, LC709203_CMD_THERMISTOR_B, THERMISTOR_B_VALUE);
+
+    if (error == PICO_ERROR_TIMEOUT) {
+        return PICO_ERROR_TIMEOUT;
+    }
+
+    error = lc709203_write_register(i2c, LC709203_CMD_ALARM_LOW_CELL_VOLTAGE, 3450);
+
+    if (error == PICO_ERROR_TIMEOUT) {
+        return PICO_ERROR_TIMEOUT;
+    }
 
     return 0;
 }

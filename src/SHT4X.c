@@ -15,16 +15,12 @@ int sht4x_setup(i2c_inst_t * i2c) {
 
     reg = SHT4X_CMD_SOFT_RESET;
 
-    error = i2c_write_blocking(i2c0, SHT4X_ADDRESS, &reg, 1, false);
+    error = i2cWriteTimeoutProtected(i2c0, SHT4X_ADDRESS, &reg, 1, false);
 
-    if (error == PICO_ERROR_GENERIC) {
-        uart_puts(uart0, "ERR_GEN\n");
-        return -1;
+    if (error == PICO_ERROR_TIMEOUT) {
+        return PICO_ERROR_TIMEOUT;
     }
-    else if (error == PICO_ERROR_TIMEOUT) {
-        uart_puts(uart0, "ERR_TM\n");
-        return -1;
+    else {
+        return error;
     }
-
-    return 0;
 }

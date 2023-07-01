@@ -123,6 +123,8 @@ const char * getSchedulerBuildDate();
 ** The scheduler API
 **
 ******************************************************************************/
+rtc_t       getRTCClock(void);
+
 void 		initScheduler(int size);
 
 void        registerTickTask(void (* tickTask)());

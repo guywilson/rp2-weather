@@ -133,7 +133,6 @@ void taskBatteryMonitor(PTASKPARM p) {
                 
                 i2c0->hw->enable = 0;
                 i2c1->hw->enable = 0;
-                i2cPowerDown();
 
                 hw_clear_bits(&spi0_hw->cr1, SPI_SSPCR1_SSE_BITS);
                 hw_clear_bits(&spi1_hw->cr1, SPI_SSPCR1_SSE_BITS);

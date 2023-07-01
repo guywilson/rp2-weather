@@ -99,21 +99,21 @@ void _nullTickTask()
 	// Do nothing...
 }
 
-PTASKDESC					taskDescs;				// Array of tasks for the scheduler, allocated in initScheduler()
-int							taskArrayLength;		// Length of the task array, e.g. num tasks allocated
+static PTASKDESC			taskDescs;				// Array of tasks for the scheduler, allocated in initScheduler()
+static int					taskArrayLength;		// Length of the task array, e.g. num tasks allocated
 
-int							taskCount = 0;			// Number of tasks registered
+static int					taskCount = 0;			// Number of tasks registered
 
-PTASKDESC					head = NULL;			// Pointer to the beginning of the registered task queue
-PTASKDESC					tail = NULL;			// Pointer to the end of the registered task queue
+static PTASKDESC			head = NULL;			// Pointer to the beginning of the registered task queue
+static PTASKDESC			tail = NULL;			// Pointer to the end of the registered task queue
 
-uint32_t					_tasksRunCount = 0;		// The total number of tasks run by the scheduler
+static uint32_t				_tasksRunCount = 0;		// The total number of tasks run by the scheduler
 
-volatile rtc_t 				_realTimeClock = 0;		// The real time clock counter
-volatile uint16_t			_tickCount = 0;			// Num ticks between rtc counts
+static volatile rtc_t 	    _realTimeClock = 0;		// The real time clock counter
+static volatile uint16_t	_tickCount = 0;			// Num ticks between rtc counts
 
-volatile uint32_t			_busyCount = 0;
-volatile uint32_t			_idleCount = 0;
+static volatile uint32_t	_busyCount = 0;
+static volatile uint32_t	_idleCount = 0;
 
 // The RTC tick task...
 void 						(* _tickTask)() = &_nullTickTask;
@@ -300,6 +300,21 @@ int isLastTask(PTASKDESC td)
 ** Public API functions
 **
 ******************************************************************************/
+
+/******************************************************************************
+**
+** Name: getRTCClock()
+**
+** Description: Returns the current RTC clock value.
+**
+** Parameters:	None
+**
+** Returns:		rtc_t 
+**
+******************************************************************************/
+rtc_t getRTCClock(void) {
+    return getRTCClockCount();
+}
 
 /******************************************************************************
 **

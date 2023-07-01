@@ -20,7 +20,11 @@ int icp10125_setup(i2c_inst_t * i2c) {
     buffer[0] = 0x80;
     buffer[1] = 0x5D;
 
-    i2c_write_blocking(i2c, ICP10125_ADDRESS, buffer, 2, false);
+    error = i2cWriteTimeoutProtected(i2c, ICP10125_ADDRESS, buffer, 2, false);
+
+    if (error == PICO_ERROR_TIMEOUT) {
+        return PICO_ERROR_TIMEOUT;
+    }
 
     sleep_ms(10U);
 
@@ -30,14 +34,11 @@ int icp10125_setup(i2c_inst_t * i2c) {
     buffer[0] = 0xEF;
     buffer[1] = 0xC8;
 
-    i2c_write_blocking(i2c, ICP10125_ADDRESS, buffer, 2, true);
-    error = i2c_read_blocking(i2c, ICP10125_ADDRESS, buffer, 3, false);
+    i2cWriteTimeoutProtected(i2c, ICP10125_ADDRESS, buffer, 2, true);
+    error = i2cReadTimeoutProtected(i2c, ICP10125_ADDRESS, buffer, 3, false);
 
-    if (error == PICO_ERROR_GENERIC) {
-        return -1;
-    }
-    else if (error == PICO_ERROR_TIMEOUT) {
-        return -1;
+    if (error == PICO_ERROR_TIMEOUT) {
+        return PICO_ERROR_TIMEOUT;
     }
     
     chipID = copyI2CReg_uint16(buffer);
@@ -53,21 +54,18 @@ int icp10125_setup(i2c_inst_t * i2c) {
     buffer[3] = 0x66;
     buffer[4] = 0x9C;
 
-    error = i2c_write_blocking(i2c0, ICP10125_ADDRESS, buffer, 5, false);
+    error = i2cWriteTimeoutProtected(i2c0, ICP10125_ADDRESS, buffer, 5, false);
 
-    if (error == PICO_ERROR_GENERIC) {
-        return -1;
-    }
-    else if (error == PICO_ERROR_TIMEOUT) {
-        return -1;
+    if (error == PICO_ERROR_TIMEOUT) {
+        return PICO_ERROR_TIMEOUT;
     }
     
     for (i = 0; i < 4; i++) {
         buffer[0] = 0xC7;
         buffer[1] = 0xF7;
 
-        i2c_write_blocking(i2c0, ICP10125_ADDRESS, buffer, 2, false);
-        i2c_read_blocking(i2c0, ICP10125_ADDRESS, buffer, 3, false);
+        i2cWriteTimeoutProtected(i2c0, ICP10125_ADDRESS, buffer, 2, false);
+        i2cReadTimeoutProtected(i2c0, ICP10125_ADDRESS, buffer, 3, false);
 
         otpValues[i] = (uint16_t)((uint16_t)buffer[0] << 8 | (uint16_t)buffer[1]);
     }

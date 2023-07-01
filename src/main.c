@@ -54,7 +54,6 @@ void setup(void) {
 
 	if (initSensors(i2c0)) {
 		lgLogError("ERR: Sensor init");
-		exit(-1);
 	}
 
     adcInit();
