@@ -117,7 +117,7 @@ int i2c_bus_init(i2c_inst_t * i2c, int numDevices) {
     return 0;
 }
 
-int i2c_bus_register_device(i2c_inst_t * i2c, uint address, int (* setup)(i2c_inst_t *)) {
+int i2c_bus_register_device(i2c_inst_t * i2c, const uint address, int (* setup)(i2c_inst_t *)) {
     static int              busIndex = 0;
     i2c_device_t *          devices;
 
@@ -167,7 +167,13 @@ int i2c_bus_setup(i2c_inst_t * i2c) {
     return error;
 }
 
-int i2cReadTimeoutProtected(i2c_inst_t * i2c, const uint address, uint8_t * dst, size_t len, bool nostop) {
+int i2cReadTimeoutProtected(
+                i2c_inst_t * i2c, 
+                const uint address, 
+                uint8_t * dst, 
+                size_t len, 
+                bool nostop)
+{
     int             error;
     i2c_device_t *  device;
 
@@ -191,7 +197,13 @@ int i2cReadTimeoutProtected(i2c_inst_t * i2c, const uint address, uint8_t * dst,
     return error;
 }
 
-int i2cWriteTimeoutProtected(i2c_inst_t * i2c, const uint address, uint8_t * src, size_t len, bool nostop) {
+int i2cWriteTimeoutProtected(
+                i2c_inst_t * i2c, 
+                const uint address, 
+                uint8_t * src, 
+                size_t len, 
+                bool nostop)
+{
     int             error;
     i2c_device_t *  device;
 
@@ -241,9 +253,10 @@ int i2cReadRegister(
             const uint8_t length)
 {
     int     bytesRead = 0;
+    uint8_t regid = reg;
 
     // Read data from register(s) over I2C
-    i2cWriteTimeoutProtected(i2c, addr, &reg, 1, true);
+    i2cWriteTimeoutProtected(i2c, addr, &regid, 1, true);
     bytesRead = i2cReadTimeoutProtected(i2c, addr, data, length, false);
 
     return bytesRead;

@@ -62,7 +62,6 @@ void taskI2CSensor(PTASKPARM p) {
     static bool         isCRCReset = false;
     int                 i;
     int                 count = 0;
-    int                 i2cError;
     uint8_t             input[2];
     weather_packet_t *  pWeather = getWeatherPacket();
     rtc_t               delay;
@@ -71,7 +70,7 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_TEMP:
             lgLogDebug("Rd T");
 
-            i2cError = i2cReadRegister(i2c0, TMP117_ADDRESS, TMP117_REG_TEMP, buffer, 2);
+            i2cReadRegister(i2c0, TMP117_ADDRESS, TMP117_REG_TEMP, buffer, 2);
 
             pWeather->rawTemperature = copyI2CReg_int16(buffer);
 
