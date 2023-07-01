@@ -191,6 +191,13 @@ int i2cReadTimeoutProtected(
             if (i2cIsDeviceActive(i2c, address)) {
                 i2cSetDeviceState(i2c, address, true);
             }
+            else {
+                /*
+                ** This will reset the clock so we don't 
+                ** immediately try again
+                */
+                i2cSetDeviceState(i2c, address, false);
+            }
         }
     }
 
@@ -220,6 +227,13 @@ int i2cWriteTimeoutProtected(
         if (getRTCClock() > (device->lastStateTime + rtc_val_sec(5))) {
             if (i2cIsDeviceActive(i2c, address)) {
                 i2cSetDeviceState(i2c, address, true);
+            }
+            else {
+                /*
+                ** This will reset the clock so we don't 
+                ** immediately try again
+                */
+                i2cSetDeviceState(i2c, address, false);
             }
         }
     }
