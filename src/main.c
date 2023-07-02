@@ -32,8 +32,6 @@
 #include "gpio_def.h"
 
 void setup(void) {
-    uint16_t *          otp;
-
 	/*
 	** Disable the Watchdog, if we have restarted due to a
 	** watchdog reset, we want to enable it when we're ready...
@@ -44,25 +42,15 @@ void setup(void) {
 	setupRTC();
 	setupSerial();
 
-	i2c_init(i2c0, 400000);
-
     gpio_set_function(I2C_SDA_ALT_PIN, GPIO_FUNC_I2C);
     gpio_set_function(I2C_SLK_ALT_PIN, GPIO_FUNC_I2C);
     
     lgOpen(uart0, LOG_LEVEL_FATAL | LOG_LEVEL_ERROR | LOG_LEVEL_STATUS | LOG_LEVEL_DEBUG | LOG_LEVEL_INFO);
 //    lgOpen(uart0, LOG_LEVEL_FATAL | LOG_LEVEL_ERROR | LOG_LEVEL_STATUS);
 
-	if (initSensors(i2c0)) {
-		lgLogError("ERR: Sensor init");
-	}
-
     adcInit();
     pioInit();
     initBattery();
-
-    otp = getOTPValues();
-
-    lgLogStatus("OTP: 0x%04X, 0x%04X, 0x%04X, 0x%04X", otp[0], otp[1], otp[2], otp[3]);
 
 	spi_init(spi0, 5000000);
 
@@ -124,7 +112,7 @@ int main(void) {
 
     scheduleTask(
             TASK_BATTERY_MONITOR,
-            rtc_val_sec(10),
+            rtc_val_min(5),
             false,
             NULL);
 

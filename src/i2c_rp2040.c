@@ -18,7 +18,7 @@
 
 #define I2C_BUS_MIN_DEVICES              1
 #define I2C_BUS_MAX_DEVICES             16
-#define I2C_TIMEOUT_US                 100
+#define I2C_TIMEOUT_US                 500
 
 static i2c_device_t *       devices_i2c0;
 static i2c_device_t *       devices_i2c1;
@@ -188,15 +188,17 @@ int i2cReadTimeoutProtected(
         device = i2cGetDeviceByAddress(i2c, address);
 
         if (getRTCClock() > (device->lastStateTime + rtc_val_sec(5))) {
-            if (i2cIsDeviceActive(i2c, address)) {
-                i2cSetDeviceState(i2c, address, true);
-            }
-            else {
+            error = i2c_read_timeout_us(i2c, address, dst, len, nostop, I2C_TIMEOUT_US);
+
+            if (error == PICO_ERROR_TIMEOUT || error == PICO_ERROR_GENERIC) {
                 /*
                 ** This will reset the clock so we don't 
                 ** immediately try again
                 */
                 i2cSetDeviceState(i2c, address, false);
+            }
+            else {
+                i2cSetDeviceState(i2c, address, true);
             }
         }
     }
@@ -225,15 +227,17 @@ int i2cWriteTimeoutProtected(
         device = i2cGetDeviceByAddress(i2c, address);
 
         if (getRTCClock() > (device->lastStateTime + rtc_val_sec(5))) {
-            if (i2cIsDeviceActive(i2c, address)) {
-                i2cSetDeviceState(i2c, address, true);
-            }
-            else {
+            error = i2c_write_timeout_us(i2c, address, src, len, nostop, I2C_TIMEOUT_US);
+
+            if (error == PICO_ERROR_TIMEOUT || error == PICO_ERROR_GENERIC) {
                 /*
                 ** This will reset the clock so we don't 
                 ** immediately try again
                 */
                 i2cSetDeviceState(i2c, address, false);
+            }
+            else {
+                i2cSetDeviceState(i2c, address, true);
             }
         }
     }
