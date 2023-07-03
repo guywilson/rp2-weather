@@ -23,6 +23,8 @@
 
 #define THERMISTOR_B_VALUE                  3977
 
+#define LC709203_ERROR_CRC                  -5
+
 int     lc709203_write_register(i2c_inst_t * i2c, uint8_t reg, uint16_t data);
 int     lc709203_read_register(i2c_inst_t * i2c, uint8_t reg, uint16_t * data);
 void    lc709203_reset(i2c_inst_t * i2c);

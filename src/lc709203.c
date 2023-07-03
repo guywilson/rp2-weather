@@ -56,6 +56,9 @@ int lc709203_read_register(i2c_inst_t * i2c, uint8_t reg, uint16_t * data) {
     if (error == PICO_ERROR_TIMEOUT) {
         return PICO_ERROR_TIMEOUT;
     }
+    else if (error == PICO_ERROR_GENERIC) {
+        return PICO_ERROR_GENERIC;
+    }
 
     buffer[0] = (LC709203_ADDRESS << 1);
     buffer[1] = reg;
@@ -68,10 +71,10 @@ int lc709203_read_register(i2c_inst_t * i2c, uint8_t reg, uint16_t * data) {
     *data = ((uint16_t)((((uint16_t)buffer[4]) << 8) | (uint16_t)buffer[3]));
 
     if (crc != buffer[5]) {
-        return PICO_ERROR_GENERIC;
+        return LC709203_ERROR_CRC;
     }
 
-    return 0;
+    return error;
 }
 
 void lc709203_reset(i2c_inst_t * i2c) {

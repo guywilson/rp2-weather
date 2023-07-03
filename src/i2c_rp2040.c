@@ -18,7 +18,7 @@
 
 #define I2C_BUS_MIN_DEVICES              1
 #define I2C_BUS_MAX_DEVICES             16
-#define I2C_TIMEOUT_US                 500
+#define I2C_TIMEOUT_US                 750
 
 static i2c_device_t *       devices_i2c0;
 static i2c_device_t *       devices_i2c1;
@@ -185,6 +185,8 @@ int i2cReadTimeoutProtected(
         }
     }
     else {
+        error = PICO_ERROR_GENERIC;
+
         device = i2cGetDeviceByAddress(i2c, address);
 
         if (getRTCClock() > (device->lastStateTime + rtc_val_sec(5))) {
@@ -224,6 +226,8 @@ int i2cWriteTimeoutProtected(
         }
     }
     else {
+        error = PICO_ERROR_GENERIC;
+        
         device = i2cGetDeviceByAddress(i2c, address);
 
         if (getRTCClock() > (device->lastStateTime + rtc_val_sec(5))) {
