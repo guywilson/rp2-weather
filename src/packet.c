@@ -18,7 +18,7 @@ weather_packet_t * getWeatherPacket(void) {
     static weather_packet_t     weather;
 
     weather.packetID = PACKET_ID_WEATHER;
-    weather.chipID = getChipID();
+    weather.status = 0x0000;
     
     return &weather;
 }
@@ -27,7 +27,7 @@ sleep_packet_t * getSleepPacket(void) {
     static sleep_packet_t     sleep;
 
     sleep.packetID = PACKET_ID_SLEEP;
-    sleep.chipID = getChipID();
+    sleep.status = 0x0000;
     
     return &sleep;
 }
@@ -36,7 +36,7 @@ watchdog_packet_t * getWatchdogPacket(void) {
     static watchdog_packet_t     wp;
 
     wp.packetID = PACKET_ID_WEATHER;
-    wp.chipID = getChipID();
+    wp.status = 0x0000;
     
     return &wp;
 }

@@ -105,6 +105,7 @@ void taskI2CSensor(PTASKPARM p) {
             }
             else {
                 pWeather->rawTemperature = 0;
+                pWeather->status |= STATUS_BITS_TMP117_I2C_ERROR;
             }
 
             state = STATE_READ_HUMIDITY_1;
@@ -132,6 +133,7 @@ void taskI2CSensor(PTASKPARM p) {
             }
             else {
                 pWeather->rawHumidity = 0;
+                pWeather->status |= STATUS_BITS_SHT4X_I2C_ERROR;
             }
 
             state = STATE_READ_PRESSURE_1;
@@ -166,6 +168,7 @@ void taskI2CSensor(PTASKPARM p) {
             else {
                 pWeather->rawICPTemperature = 1;
                 pWeather->rawICPPressure = 1;
+                pWeather->status |= STATUS_BITS_ICP10125_I2C_ERROR;
             }
 
             state = STATE_READ_ALS;
@@ -187,6 +190,7 @@ void taskI2CSensor(PTASKPARM p) {
                 pWeather->rawALS_UV[0] = 0x00;
                 pWeather->rawALS_UV[1] = 0x00;
                 pWeather->rawALS_UV[2] = 0x00;
+                pWeather->status |= STATUS_BITS_LTR390_ALS_I2C_ERROR;
             }
 
             input[0] = LTR390_CTRL_SENSOR_ENABLE | LTR390_CTRL_UVS_MODE_UVS;
@@ -211,6 +215,7 @@ void taskI2CSensor(PTASKPARM p) {
                 pWeather->rawALS_UV[2] = 0x00;
                 pWeather->rawALS_UV[3] = 0x00;
                 pWeather->rawALS_UV[4] = 0x00;
+                pWeather->status |= STATUS_BITS_LTR390_UVI_I2C_ERROR;
             }
 
             input[0] = LTR390_CTRL_SENSOR_ENABLE | LTR390_CTRL_UVS_MODE_ALS;
@@ -228,15 +233,18 @@ void taskI2CSensor(PTASKPARM p) {
             switch (bytesRead) {
                 case LC709203_ERROR_CRC:
                     lgLogError("LC crc_err");
+                    pWeather->status |= STATUS_BITS_LC709203_BV_I2C_CRC_ERROR;
                     crcFailCount++;
                     break;
 
                 case PICO_ERROR_TIMEOUT:
                     lgLogError("LC tmo_err");
+                    pWeather->status |= STATUS_BITS_LC709203_BV_I2C_TIMEOUT_ERROR;
                     break;
 
                 case PICO_ERROR_GENERIC:
                     lgLogError("LC gen_err");
+                    pWeather->status |= STATUS_BITS_LC709203_BV_I2C_GEN_ERROR;
                     break;
 
                 default:
@@ -262,14 +270,17 @@ void taskI2CSensor(PTASKPARM p) {
                 case LC709203_ERROR_CRC:
                     lgLogError("LC crc_err");
                     crcFailCount++;
+                    pWeather->status |= STATUS_BITS_LC709203_BP_I2C_CRC_ERROR;
                     break;
 
                 case PICO_ERROR_TIMEOUT:
                     lgLogError("LC tmo_err");
+                    pWeather->status |= STATUS_BITS_LC709203_BP_I2C_TIMEOUT_ERROR;
                     break;
 
                 case PICO_ERROR_GENERIC:
                     lgLogError("LC gen_err");
+                    pWeather->status |= STATUS_BITS_LC709203_BP_I2C_GEN_ERROR;
                     break;
 
                 default:
@@ -295,14 +306,17 @@ void taskI2CSensor(PTASKPARM p) {
                 case LC709203_ERROR_CRC:
                     lgLogError("LC crc_err");
                     crcFailCount++;
+                    pWeather->status |= STATUS_BITS_LC709203_BT_I2C_CRC_ERROR;
                     break;
 
                 case PICO_ERROR_TIMEOUT:
                     lgLogError("LC tmo_err");
+                    pWeather->status |= STATUS_BITS_LC709203_BT_I2C_TIMEOUT_ERROR;
                     break;
 
                 case PICO_ERROR_GENERIC:
                     lgLogError("LC gen_err");
+                    pWeather->status |= STATUS_BITS_LC709203_BT_I2C_GEN_ERROR;
                     break;
 
                 default:

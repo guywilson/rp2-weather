@@ -185,8 +185,6 @@ int i2cReadTimeoutProtected(
         }
     }
     else {
-        error = PICO_ERROR_GENERIC;
-
         device = i2cGetDeviceByAddress(i2c, address);
 
         if (getRTCClock() > (device->lastStateTime + rtc_val_sec(5))) {
@@ -202,6 +200,9 @@ int i2cReadTimeoutProtected(
             else {
                 i2cSetDeviceState(i2c, address, true);
             }
+        }
+        else {
+            error = PICO_ERROR_GENERIC;
         }
     }
 
@@ -226,8 +227,6 @@ int i2cWriteTimeoutProtected(
         }
     }
     else {
-        error = PICO_ERROR_GENERIC;
-        
         device = i2cGetDeviceByAddress(i2c, address);
 
         if (getRTCClock() > (device->lastStateTime + rtc_val_sec(5))) {
@@ -243,6 +242,9 @@ int i2cWriteTimeoutProtected(
             else {
                 i2cSetDeviceState(i2c, address, true);
             }
+        }
+        else {
+            error = PICO_ERROR_GENERIC;
         }
     }
 
