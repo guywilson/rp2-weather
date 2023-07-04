@@ -22,8 +22,9 @@
 #include "nRF24L01.h"
 #include "utils.h"
 
-#define STATE_SETUP                 0x0010
-#define STATE_SETUP_LC709203        0x0020
+#define STATE_I2C_INIT              0x0001
+#define STATE_SETUP_LC709203        0x0010
+#define STATE_SETUP                 0x0020
 #define STATE_READ_TEMP             0x0100
 #define STATE_READ_HUMIDITY_1       0x0200
 #define STATE_READ_HUMIDITY_2       0x0201
@@ -62,7 +63,7 @@ int initSensors(i2c_inst_t * i2c) {
 }
 
 void taskI2CSensor(PTASKPARM p) {
-    static int          state = STATE_SETUP;
+    static int          state = STATE_I2C_INIT;
     static int          crcFailCount = 0;
     static uint16_t     lastSuccessfulBatteryVolts = 3700;
     static uint16_t     lastSuccessfulBatteryPercent = 1000;
@@ -76,20 +77,28 @@ void taskI2CSensor(PTASKPARM p) {
     rtc_t               delay;
 
     switch (state) {
-        case STATE_SETUP:
+        case STATE_I2C_INIT:
             i2c_init(i2c0, 400000);
+
+            delay = rtc_val_ms(100);
+            state = STATE_SETUP_LC709203;
+            break;
+
+        case STATE_SETUP_LC709203:
+            lc709203_setup(i2c0);
+
+            delay = rtc_val_sec(5);
+            state = STATE_SETUP;
+            break;
+
+        case STATE_SETUP:
             initSensors(i2c0);
 
             otp = getOTPValues();
 
             lgLogStatus("OTP: 0x%04X, 0x%04X, 0x%04X, 0x%04X", otp[0], otp[1], otp[2], otp[3]);
 
-            delay = rtc_val_sec(5);
-            state = STATE_SETUP_LC709203;
-            break;
-
-        case STATE_SETUP_LC709203:
-            lc709203_setup(i2c0);
+            pWeather->status = 0x0000;
 
             delay = rtc_val_sec(5);
             state = STATE_READ_TEMP;
@@ -356,6 +365,8 @@ void taskI2CSensor(PTASKPARM p) {
 
         case STATE_SEND_FINISH:
             nRF24L01_powerDown(spi0);
+
+            pWeather->status = 0x0000;
 
             if (crcFailCount > 9) {
                 crcFailCount = 0;
