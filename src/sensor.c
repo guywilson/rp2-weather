@@ -23,6 +23,7 @@
 #include "utils.h"
 
 #define STATE_SETUP                 0x0010
+#define STATE_SETUP_LC709203        0x0020
 #define STATE_READ_TEMP             0x0100
 #define STATE_READ_HUMIDITY_1       0x0200
 #define STATE_READ_HUMIDITY_2       0x0201
@@ -48,13 +49,12 @@ static char                 szBuffer[128];
 int initSensors(i2c_inst_t * i2c) {
     int         rtn = 0;
 
-    i2c_bus_init(i2c, 5);
+    i2c_bus_init(i2c, 4);
 
     i2c_bus_register_device(i2c, TMP117_ADDRESS, &tmp117_setup);
     i2c_bus_register_device(i2c, SHT4X_ADDRESS, &sht4x_setup);
     i2c_bus_register_device(i2c, ICP10125_ADDRESS, &icp10125_setup);
     i2c_bus_register_device(i2c, LTR390_ADDRESS, &ltr390_setup);
-    i2c_bus_register_device(i2c, LC709203_ADDRESS, &lc709203_setup);
 
     rtn = i2c_bus_setup(i2c);
 
@@ -83,6 +83,13 @@ void taskI2CSensor(PTASKPARM p) {
             otp = getOTPValues();
 
             lgLogStatus("OTP: 0x%04X, 0x%04X, 0x%04X, 0x%04X", otp[0], otp[1], otp[2], otp[3]);
+
+            delay = rtc_val_sec(5);
+            state = STATE_SETUP_LC709203;
+            break;
+
+        case STATE_SETUP_LC709203:
+            lc709203_setup(i2c0);
 
             delay = rtc_val_sec(5);
             state = STATE_READ_TEMP;
