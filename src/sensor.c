@@ -64,6 +64,9 @@ int initSensors(i2c_inst_t * i2c) {
 void taskI2CSensor(PTASKPARM p) {
     static int          state = STATE_SETUP;
     static int          crcFailCount = 0;
+    static uint16_t     lastSuccessfulBatteryVolts = 3700;
+    static uint16_t     lastSuccessfulBatteryPercent = 1000;
+    static uint16_t     lastSuccessfulBatteryTemp = 2732;
     int                 i;
     int                 count = 0;
     int                 bytesRead = 0;
@@ -230,12 +233,13 @@ void taskI2CSensor(PTASKPARM p) {
                     break;
 
                 default:
+                    lastSuccessfulBatteryVolts = pWeather->rawBatteryVolts;
                     lgLogDebug("BV: %.2f", (float)pWeather->rawBatteryVolts / 1000.0);
                     break;
             }
 
             if (bytesRead < 0) {
-                pWeather->rawBatteryVolts = 3700;
+                pWeather->rawBatteryVolts = lastSuccessfulBatteryVolts;
             }
 
             delay = rtc_val_ms(1000);
@@ -262,12 +266,13 @@ void taskI2CSensor(PTASKPARM p) {
                     break;
 
                 default:
+                    lastSuccessfulBatteryPercent = pWeather->rawBatteryPercentage;
                     lgLogDebug("BP: %.2f", (float)pWeather->rawBatteryPercentage / 10.0);
                     break;
             }
 
             if (bytesRead < 0) {
-                pWeather->rawBatteryPercentage = 1000;
+                pWeather->rawBatteryPercentage = lastSuccessfulBatteryPercent;
             }
 
             delay = rtc_val_ms(1000);
@@ -294,12 +299,13 @@ void taskI2CSensor(PTASKPARM p) {
                     break;
 
                 default:
+                    lastSuccessfulBatteryTemp = pWeather->rawBatteryTemperature;
                     lgLogDebug("BT: %.2f", ((float)pWeather->rawBatteryTemperature / 10.0) - 273.15);
                     break;
             }
 
             if (bytesRead < 0) {
-                pWeather->rawBatteryTemperature = 2732;
+                pWeather->rawBatteryTemperature = lastSuccessfulBatteryTemp;
             }
 
             delay = rtc_val_ms(22600);
