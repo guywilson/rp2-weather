@@ -18,7 +18,7 @@
 
 #define I2C_BUS_MIN_DEVICES              1
 #define I2C_BUS_MAX_DEVICES             16
-#define I2C_TIMEOUT_US                 750
+#define I2C_TIMEOUT_US                2500
 
 static i2c_device_t *       devices_i2c0;
 static i2c_device_t *       devices_i2c1;

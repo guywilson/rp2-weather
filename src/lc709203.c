@@ -119,6 +119,6 @@ int lc709203_setup(i2c_inst_t * i2c) {
     if (error == PICO_ERROR_TIMEOUT) {
         return PICO_ERROR_TIMEOUT;
     }
-
+    
     return 0;
 }

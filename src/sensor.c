@@ -47,11 +47,16 @@
 static uint8_t              buffer[32];
 static char                 szBuffer[128];
 
+int nullSetup(i2c_inst_t * i2c) {
+    return 0;
+}
+
 int initSensors(i2c_inst_t * i2c) {
     int         rtn = 0;
 
-    i2c_bus_init(i2c, 4);
+    i2c_bus_init(i2c, 5);
 
+    i2c_bus_register_device(i2c, LC709203_ADDRESS, &nullSetup);
     i2c_bus_register_device(i2c, TMP117_ADDRESS, &tmp117_setup);
     i2c_bus_register_device(i2c, SHT4X_ADDRESS, &sht4x_setup);
     i2c_bus_register_device(i2c, ICP10125_ADDRESS, &icp10125_setup);
@@ -78,7 +83,7 @@ void taskI2CSensor(PTASKPARM p) {
 
     switch (state) {
         case STATE_I2C_INIT:
-            i2c_init(i2c0, 400000);
+            i2c_init(i2c0, 100000);
 
             delay = rtc_val_ms(100);
             state = STATE_SETUP_LC709203;
