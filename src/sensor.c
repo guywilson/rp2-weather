@@ -244,6 +244,8 @@ void taskI2CSensor(PTASKPARM p) {
             
             bytesRead = lc709203_read_register(i2c0, LC709203_CMD_CELL_VOLTAGE, &pWeather->rawBatteryVolts);
 
+            lgLogDebug("LC Bytes read: %d", bytesRead);
+
             switch (bytesRead) {
                 case LC709203_ERROR_CRC:
                     lgLogError("LC crc_err");
@@ -280,6 +282,8 @@ void taskI2CSensor(PTASKPARM p) {
 
             bytesRead = lc709203_read_register(i2c0, LC709203_CMD_ITE, &pWeather->rawBatteryPercentage);
 
+            lgLogDebug("LC Bytes read: %d", bytesRead);
+
             switch (bytesRead) {
                 case LC709203_ERROR_CRC:
                     lgLogError("LC crc_err");
@@ -315,6 +319,8 @@ void taskI2CSensor(PTASKPARM p) {
             lgLogDebug("Rd BT");
 
             bytesRead = lc709203_read_register(i2c0, LC709203_CMD_CELL_TEMERATURE, &pWeather->rawBatteryTemperature);
+
+            lgLogDebug("LC Bytes read: %d", bytesRead);
 
             switch (bytesRead) {
                 case LC709203_ERROR_CRC:

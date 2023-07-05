@@ -264,7 +264,7 @@ int i2cWriteRegister(
     msg[0] = reg;
     memcpy(&msg[1], data, length);
 
-    bytesWritten = i2cWriteTimeoutProtected(i2c, addr, msg, (length + 1), false);
+    bytesWritten = i2c_write_timeout_us(i2c, addr, msg, (length + 1), false, I2C_TIMEOUT_US);
 
     return bytesWritten;
 }
@@ -280,7 +280,7 @@ int i2cReadRegister(
     uint8_t regid = reg;
 
     // Read data from register(s) over I2C
-    i2cWriteTimeoutProtected(i2c, addr, &regid, 1, true);
+    i2c_write_timeout_us(i2c, addr, &regid, 1, true, I2C_TIMEOUT_US);
     bytesRead = i2cReadTimeoutProtected(i2c, addr, data, length, false);
 
     return bytesRead;
