@@ -17,8 +17,6 @@
 
 #define I2C0_POWER_PIN              11
 
-#define BATTERY_CHARGE_ENABLE       12
-
 #define SCHED_CPU0_TRACE            14
 #define SCHED_CPU1_TRACE            15
 

@@ -72,7 +72,6 @@ void taskI2CSensor(PTASKPARM p) {
     static int          crcFailCount = 0;
     static uint16_t     lastSuccessfulBatteryVolts = 3700;
     static uint16_t     lastSuccessfulBatteryPercent = 1000;
-    static uint16_t     lastSuccessfulBatteryTemp = 2732;
     int                 i;
     int                 count = 0;
     int                 bytesRead = 0;
@@ -311,47 +310,47 @@ void taskI2CSensor(PTASKPARM p) {
                 pWeather->rawBatteryPercentage = lastSuccessfulBatteryPercent;
             }
 
-            delay = rtc_val_ms(1000);
-            state = STATE_READ_BATTERY_TEMP;
-            break;
-
-        case STATE_READ_BATTERY_TEMP:
-            lgLogDebug("Rd BT");
-
-            bytesRead = lc709203_read_register(i2c0, LC709203_CMD_CELL_TEMERATURE, &pWeather->rawBatteryTemperature);
-
-            lgLogDebug("LC Bytes read: %d", bytesRead);
-
-            switch (bytesRead) {
-                case LC709203_ERROR_CRC:
-                    lgLogError("LC crc_err");
-                    crcFailCount++;
-                    pWeather->status |= STATUS_BITS_LC709203_BT_I2C_CRC_ERROR;
-                    break;
-
-                case PICO_ERROR_TIMEOUT:
-                    lgLogError("LC tmo_err");
-                    pWeather->status |= STATUS_BITS_LC709203_BT_I2C_TIMEOUT_ERROR;
-                    break;
-
-                case PICO_ERROR_GENERIC:
-                    lgLogError("LC gen_err");
-                    pWeather->status |= STATUS_BITS_LC709203_BT_I2C_GEN_ERROR;
-                    break;
-
-                default:
-                    lastSuccessfulBatteryTemp = pWeather->rawBatteryTemperature;
-                    lgLogDebug("BT: %.2f", ((float)pWeather->rawBatteryTemperature / 10.0) - 273.15);
-                    break;
-            }
-
-            if (bytesRead < 0) {
-                pWeather->rawBatteryTemperature = lastSuccessfulBatteryTemp;
-            }
-
-            delay = rtc_val_ms(22600);
+            delay = rtc_val_ms(23600);
             state = STATE_SEND_BEGIN;
             break;
+
+        // case STATE_READ_BATTERY_TEMP:
+        //     lgLogDebug("Rd BT");
+
+        //     bytesRead = lc709203_read_register(i2c0, LC709203_CMD_CELL_TEMERATURE, &pWeather->rawBatteryTemperature);
+
+        //     lgLogDebug("LC Bytes read: %d", bytesRead);
+
+        //     switch (bytesRead) {
+        //         case LC709203_ERROR_CRC:
+        //             lgLogError("LC crc_err");
+        //             crcFailCount++;
+        //             pWeather->status |= STATUS_BITS_LC709203_BT_I2C_CRC_ERROR;
+        //             break;
+
+        //         case PICO_ERROR_TIMEOUT:
+        //             lgLogError("LC tmo_err");
+        //             pWeather->status |= STATUS_BITS_LC709203_BT_I2C_TIMEOUT_ERROR;
+        //             break;
+
+        //         case PICO_ERROR_GENERIC:
+        //             lgLogError("LC gen_err");
+        //             pWeather->status |= STATUS_BITS_LC709203_BT_I2C_GEN_ERROR;
+        //             break;
+
+        //         default:
+        //             lastSuccessfulBatteryTemp = pWeather->rawBatteryTemperature;
+        //             lgLogDebug("BT: %.2f", ((float)pWeather->rawBatteryTemperature / 10.0) - 273.15);
+        //             break;
+        //     }
+
+        //     if (bytesRead < 0) {
+        //         pWeather->rawBatteryTemperature = lastSuccessfulBatteryTemp;
+        //     }
+
+        //     delay = rtc_val_ms(22600);
+        //     state = STATE_SEND_BEGIN;
+        //     break;
 
         case STATE_SEND_BEGIN:
             nRF24L01_powerUpTx(spi0);

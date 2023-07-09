@@ -31,17 +31,6 @@
 datetime_t                  dt;
 datetime_t                  alarm_dt;
 
-static void setChargeState(bool isEnabled) {
-    gpio_put(BATTERY_CHARGE_ENABLE, !isEnabled);
-}
-
-void initBattery() {
-    gpio_init(BATTERY_CHARGE_ENABLE);
-    gpio_set_dir(BATTERY_CHARGE_ENABLE, GPIO_OUT);
-
-    gpio_put(BATTERY_CHARGE_ENABLE, false);
-}
-
 void wakeUp(void) {
 	/*
 	** Enable the watchdog, it will reset the device in 100ms...
@@ -62,18 +51,8 @@ void taskBatteryMonitor(PTASKPARM p) {
     pWeather = getWeatherPacket();
     pSleep = getSleepPacket();
 
-    /*
-    ** If the battery temperature is above critical, disable charging.
-    */
-    if (pWeather->rawBatteryTemperature > BATTERY_TEMPERATURE_CRITICAL) {
-        setChargeState(false);
-    }
-    else if (pWeather->rawBatteryTemperature < BATTERY_TEMPERATURE_LIMIT) {
-        setChargeState(true);
-    }
-
     /* 
-    ** If the battery voltage has dropped below critical,
+    ** If the battery percentage has dropped below critical,
     ** stop everything and put the RP2040 to sleep...
     */
     if (runCount > 6) {

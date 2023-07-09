@@ -24,8 +24,7 @@
 ** 4            LTR390 UVI  E
 ** 5 - 7        LC709203 BV T|G|C
 ** 8 - 10       LC709203 BP T|G|C
-** 11 - 13      LC709203 BT T|G|C
-** 14 - 15      Reserved
+** 11 - 15      Reserved
 */
 #define STATUS_BITS_TMP117_I2C_ERROR                0x0001
 #define STATUS_BITS_SHT4X_I2C_ERROR                 0x0002
@@ -38,9 +37,9 @@
 #define STATUS_BITS_LC709203_BP_I2C_CRC_ERROR       0x0100
 #define STATUS_BITS_LC709203_BP_I2C_GEN_ERROR       0x0200
 #define STATUS_BITS_LC709203_BP_I2C_TIMEOUT_ERROR   0x0400
-#define STATUS_BITS_LC709203_BT_I2C_CRC_ERROR       0x0800
-#define STATUS_BITS_LC709203_BT_I2C_GEN_ERROR       0x1000
-#define STATUS_BITS_LC709203_BT_I2C_TIMEOUT_ERROR   0x2000
+// #define STATUS_BITS_LC709203_BT_I2C_CRC_ERROR       0x0800
+// #define STATUS_BITS_LC709203_BT_I2C_GEN_ERROR       0x1000
+// #define STATUS_BITS_LC709203_BT_I2C_TIMEOUT_ERROR   0x2000
 
 #pragma pack(push, 1)
 typedef struct {                                    // O/S  - Description
