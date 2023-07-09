@@ -17,7 +17,7 @@
 #define NRF24L01_REMOTE_ADDRESS         "AZ438"
 #define NRF24L01_LOCAL_ADDRESS          "AZ437"
 
-#define NRF24L01_RF_CHANNEL             76
+#define NRF24L01_RF_CHANNEL             9
 
 
 typedef struct {
