@@ -121,8 +121,7 @@ void taskBatteryMonitor(PTASKPARM p) {
                     SCHED_CPU1_TRACE | 
                     NRF24L01_SPI_PIN_CE | 
                     NRF24L01_SPI_PIN_CSN | 
-                    ONBAORD_LED_PIN | 
-                    I2C0_POWER_PIN,
+                    ONBAORD_LED_PIN,
                     0x00000000);
 
                 /*

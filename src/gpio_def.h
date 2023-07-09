@@ -15,8 +15,6 @@
 #define NRF24L01_SPI_PIN_MISO        4
 #define NRF24L01_SPI_PIN_SCK         2
 
-#define I2C0_POWER_PIN              11
-
 #define SCHED_CPU0_TRACE            14
 #define SCHED_CPU1_TRACE            15
 
