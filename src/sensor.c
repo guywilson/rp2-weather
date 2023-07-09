@@ -68,17 +68,17 @@ int initSensors(i2c_inst_t * i2c) {
 }
 
 void taskI2CSensor(PTASKPARM p) {
-    static int          state = STATE_I2C_INIT;
-    static int          crcFailCount = 0;
-    static uint16_t     lastSuccessfulBatteryVolts = 3700;
-    static uint16_t     lastSuccessfulBatteryPercent = 1000;
-    int                 i;
-    int                 count = 0;
-    int                 bytesRead = 0;
-    uint16_t *          otp;
-    uint8_t             input[2];
-    weather_packet_t *  pWeather = getWeatherPacket();
-    rtc_t               delay;
+    static int                  state = STATE_I2C_INIT;
+    static int                  crcFailCount = 0;
+    static weather_packet_t     lastPacket;
+    int                         i;
+    int                         count = 0;
+    int                         bytesRead = 0;
+    uint16_t *                  otp;
+    uint8_t                     input[2];
+    rtc_t                       delay;
+
+    weather_packet_t *          pWeather = getWeatherPacket();
 
     switch (state) {
         case STATE_I2C_INIT:
@@ -115,9 +115,10 @@ void taskI2CSensor(PTASKPARM p) {
 
             if (bytesRead > 0) {
                 pWeather->rawTemperature = copyI2CReg_int16(buffer);
+                lastPacket.rawTemperature = pWeather->rawTemperature;
             }
             else {
-                pWeather->rawTemperature = 0;
+                pWeather->rawTemperature = lastPacket.rawTemperature;
                 pWeather->status |= STATUS_BITS_TMP117_I2C_ERROR;
             }
 
@@ -143,9 +144,10 @@ void taskI2CSensor(PTASKPARM p) {
 
             if (bytesRead > 0) {
                 pWeather->rawHumidity = copyI2CReg_uint16(&buffer[3]);
+                lastPacket.rawHumidity = pWeather->rawHumidity;
             }
             else {
-                pWeather->rawHumidity = 0;
+                pWeather->rawHumidity = lastPacket.rawHumidity;
                 pWeather->status |= STATUS_BITS_SHT4X_I2C_ERROR;
             }
 
@@ -177,10 +179,13 @@ void taskI2CSensor(PTASKPARM p) {
                     (uint32_t)(((uint32_t)buffer[3] << 16) | 
                                 ((uint32_t)buffer[4] << 8) | 
                                 (uint32_t)buffer[6]);
+
+                lastPacket.rawICPTemperature = pWeather->rawICPTemperature;
+                lastPacket.rawICPPressure = pWeather->rawICPPressure;
             }
             else {
-                pWeather->rawICPTemperature = 1;
-                pWeather->rawICPPressure = 1;
+                pWeather->rawICPTemperature = lastPacket.rawICPTemperature;
+                pWeather->rawICPPressure = lastPacket.rawICPPressure;
                 pWeather->status |= STATUS_BITS_ICP10125_I2C_ERROR;
             }
 
@@ -198,11 +203,11 @@ void taskI2CSensor(PTASKPARM p) {
             if (bytesRead > 0) {
                 lgLogDebug("Rx: %02X %02X %02X", buffer[0], buffer[1], buffer[2]);
                 memcpy(&pWeather->rawALS_UV[0], buffer, 3);
+
+                memcpy(&lastPacket.rawALS_UV[0], &pWeather->rawALS_UV[0], 3);
             }
             else {
-                pWeather->rawALS_UV[0] = 0x00;
-                pWeather->rawALS_UV[1] = 0x00;
-                pWeather->rawALS_UV[2] = 0x00;
+                memcpy(&pWeather->rawALS_UV[0], &lastPacket.rawALS_UV[0], 3);
                 pWeather->status |= STATUS_BITS_LTR390_ALS_I2C_ERROR;
             }
 
@@ -223,11 +228,11 @@ void taskI2CSensor(PTASKPARM p) {
                 pWeather->rawALS_UV[2] |= ((buffer[2] << 4) & 0xF0);
                 pWeather->rawALS_UV[3] = buffer[1];
                 pWeather->rawALS_UV[4] = buffer[0];
+
+                memcpy(&lastPacket.rawALS_UV[2], &pWeather->rawALS_UV[2], 3);
             }
             else {
-                pWeather->rawALS_UV[2] = 0x00;
-                pWeather->rawALS_UV[3] = 0x00;
-                pWeather->rawALS_UV[4] = 0x00;
+                memcpy(&pWeather->rawALS_UV[2], &lastPacket.rawALS_UV[2], 3);
                 pWeather->status |= STATUS_BITS_LTR390_UVI_I2C_ERROR;
             }
 
@@ -263,13 +268,13 @@ void taskI2CSensor(PTASKPARM p) {
                     break;
 
                 default:
-                    lastSuccessfulBatteryVolts = pWeather->rawBatteryVolts;
+                    lastPacket.rawBatteryVolts = pWeather->rawBatteryVolts;
                     lgLogDebug("BV: %.2f", (float)pWeather->rawBatteryVolts / 1000.0);
                     break;
             }
 
             if (bytesRead < 0) {
-                pWeather->rawBatteryVolts = lastSuccessfulBatteryVolts;
+                pWeather->rawBatteryVolts = lastPacket.rawBatteryVolts;
             }
 
             delay = rtc_val_ms(1000);
@@ -301,13 +306,13 @@ void taskI2CSensor(PTASKPARM p) {
                     break;
 
                 default:
-                    lastSuccessfulBatteryPercent = pWeather->rawBatteryPercentage;
+                    lastPacket.rawBatteryPercentage = pWeather->rawBatteryPercentage;
                     lgLogDebug("BP: %.2f", (float)pWeather->rawBatteryPercentage / 10.0);
                     break;
             }
 
             if (bytesRead < 0) {
-                pWeather->rawBatteryPercentage = lastSuccessfulBatteryPercent;
+                pWeather->rawBatteryPercentage = lastPacket.rawBatteryPercentage;
             }
 
             delay = rtc_val_ms(23600);
