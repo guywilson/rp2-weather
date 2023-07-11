@@ -129,5 +129,5 @@ void icp10125_process_data(const int p_LSB, const int T_LSB, int * pressure, int
     C = out[2]; 
     
     *pressure = (int)(A + B / (C + p_LSB)); 
-    *temperature = (int)(130.0f / (float)(T_LSB << 16) * 100.0);
+    *temperature = (int)((-45.0f + 175.0f / 65536.f * T_LSB) * 100.0f);
 }
