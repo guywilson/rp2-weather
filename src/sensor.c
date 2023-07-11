@@ -190,7 +190,7 @@ void taskI2CSensor(PTASKPARM p) {
 
                 icp10125_process_data(p_LSB, t_LSB, &icpPressure, &icpTemperature);
 
-                pWeather->rawICPPressure = (uint16_t)icpPressure;
+                pWeather->rawICPPressure = (uint32_t)icpPressure;
                 lastPacket.rawICPPressure = pWeather->rawICPPressure;
             }
             else {
