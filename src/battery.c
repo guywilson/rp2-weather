@@ -84,7 +84,6 @@ void taskBatteryMonitor(PTASKPARM p) {
                 break;
 
             case STATE_RADIO_SEND_PACKET:
-                pSleep->rawBatteryTemperature = pWeather->rawBatteryTemperature;
                 pSleep->rawBatteryVolts = pWeather->rawBatteryVolts;
                 pSleep->sleepHours = 48;
 

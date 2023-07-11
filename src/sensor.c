@@ -30,6 +30,7 @@
 #define STATE_READ_HUMIDITY_2       0x0201
 #define STATE_READ_PRESSURE_1       0x0300
 #define STATE_READ_PRESSURE_2       0x0301
+#define STATE_READ_PRESSURE_3       0x0302
 #define STATE_READ_ALS              0x0400
 #define STATE_READ_UVS              0x0410
 #define STATE_READ_BATTERY_VOLTS    0x0500
@@ -74,7 +75,10 @@ void taskI2CSensor(PTASKPARM p) {
     int                         i;
     int                         count = 0;
     int                         bytesRead = 0;
-    uint16_t *                  otp;
+    int                         p_LSB;
+    int                         t_LSB;
+    int                         icpTemperature;
+    int                         icpPressure;
     uint8_t                     input[2];
     rtc_t                       delay;
 
@@ -97,10 +101,6 @@ void taskI2CSensor(PTASKPARM p) {
 
         case STATE_SETUP:
             initSensors(i2c0);
-
-            otp = getOTPValues();
-
-            lgLogStatus("OTP: 0x%04X, 0x%04X, 0x%04X, 0x%04X", otp[0], otp[1], otp[2], otp[3]);
 
             pWeather->status = 0x0000;
 
@@ -157,40 +157,49 @@ void taskI2CSensor(PTASKPARM p) {
 
         case STATE_READ_PRESSURE_1:
             lgLogDebug("Rd P1");
+
+            icp10125_read_otp();
+
+            state = STATE_READ_PRESSURE_2;
+            delay = rtc_val_ms(50);
+            break;
+
+        case STATE_READ_PRESSURE_2:
+            lgLogDebug("Rd P2");
             
             input[0] = 0x70;
             input[1] = 0xDF;
 
             i2cWriteTimeoutProtected(i2c0, ICP10125_ADDRESS, input, 2, false);
 
-            state = STATE_READ_PRESSURE_2;
+            state = STATE_READ_PRESSURE_3;
             delay = rtc_val_ms(25);
             break;
 
-        case STATE_READ_PRESSURE_2:
-            lgLogDebug("Rd P2");
+        case STATE_READ_PRESSURE_3:
+            lgLogDebug("Rd P3");
             
             bytesRead = i2cReadTimeoutProtected(i2c0, ICP10125_ADDRESS, buffer, 9, false);
 
             if (bytesRead == 9) {
-                pWeather->rawICPTemperature = copyI2CReg_uint16(buffer);
+                t_LSB = copyI2CReg_uint16(buffer);
 
-                pWeather->rawICPPressure = 
-                    (uint32_t)(((uint32_t)buffer[3] << 16) | 
-                                ((uint32_t)buffer[4] << 8) | 
-                                (uint32_t)buffer[6]);
+                p_LSB = (int)(((int)buffer[3] << 16) | 
+                                ((int)buffer[4] << 8) | 
+                                (int)buffer[6]);
 
-                lastPacket.rawICPTemperature = pWeather->rawICPTemperature;
+                icp10125_process_data(p_LSB, t_LSB, &icpPressure, &icpTemperature);
+
+                pWeather->rawICPPressure = (uint16_t)icpPressure;
                 lastPacket.rawICPPressure = pWeather->rawICPPressure;
             }
             else {
-                pWeather->rawICPTemperature = lastPacket.rawICPTemperature;
                 pWeather->rawICPPressure = lastPacket.rawICPPressure;
                 pWeather->status |= STATUS_BITS_ICP10125_I2C_ERROR;
             }
 
             state = STATE_READ_ALS;
-            delay = rtc_val_ms(975);
+            delay = rtc_val_ms(925);
             break;
 
         case STATE_READ_ALS:
@@ -318,44 +327,6 @@ void taskI2CSensor(PTASKPARM p) {
             delay = rtc_val_ms(23600);
             state = STATE_SEND_BEGIN;
             break;
-
-        // case STATE_READ_BATTERY_TEMP:
-        //     lgLogDebug("Rd BT");
-
-        //     bytesRead = lc709203_read_register(i2c0, LC709203_CMD_CELL_TEMERATURE, &pWeather->rawBatteryTemperature);
-
-        //     lgLogDebug("LC Bytes read: %d", bytesRead);
-
-        //     switch (bytesRead) {
-        //         case LC709203_ERROR_CRC:
-        //             lgLogError("LC crc_err");
-        //             crcFailCount++;
-        //             pWeather->status |= STATUS_BITS_LC709203_BT_I2C_CRC_ERROR;
-        //             break;
-
-        //         case PICO_ERROR_TIMEOUT:
-        //             lgLogError("LC tmo_err");
-        //             pWeather->status |= STATUS_BITS_LC709203_BT_I2C_TIMEOUT_ERROR;
-        //             break;
-
-        //         case PICO_ERROR_GENERIC:
-        //             lgLogError("LC gen_err");
-        //             pWeather->status |= STATUS_BITS_LC709203_BT_I2C_GEN_ERROR;
-        //             break;
-
-        //         default:
-        //             lastSuccessfulBatteryTemp = pWeather->rawBatteryTemperature;
-        //             lgLogDebug("BT: %.2f", ((float)pWeather->rawBatteryTemperature / 10.0) - 273.15);
-        //             break;
-        //     }
-
-        //     if (bytesRead < 0) {
-        //         pWeather->rawBatteryTemperature = lastSuccessfulBatteryTemp;
-        //     }
-
-        //     delay = rtc_val_ms(22600);
-        //     state = STATE_SEND_BEGIN;
-        //     break;
 
         case STATE_SEND_BEGIN:
             nRF24L01_powerUpTx(spi0);
