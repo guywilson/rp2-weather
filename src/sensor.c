@@ -77,7 +77,6 @@ void taskI2CSensor(PTASKPARM p) {
     int                         bytesRead = 0;
     int                         p_LSB;
     int                         t_LSB;
-    int                         icpTemperature;
     int                         icpPressure;
     uint8_t                     input[2];
     rtc_t                       delay;
@@ -188,7 +187,7 @@ void taskI2CSensor(PTASKPARM p) {
                                 ((int)buffer[4] << 8) | 
                                 (int)buffer[6]);
 
-                icp10125_process_data(p_LSB, t_LSB, &icpPressure, &icpTemperature);
+                icp10125_process_data(p_LSB, t_LSB, &icpPressure);
 
                 pWeather->rawICPPressure = (uint32_t)icpPressure;
                 lastPacket.rawICPPressure = pWeather->rawICPPressure;

@@ -108,7 +108,7 @@ int icp10125_read_otp(void) {
     return 0;
 }
 
-void icp10125_process_data(const int p_LSB, const int T_LSB, int * pressure, int * temperature) { 
+void icp10125_process_data(const int p_LSB, const int T_LSB, int * pressure) { 
     float t; 
     float s1, s2, s3; 
     float in[3]; 
@@ -129,5 +129,4 @@ void icp10125_process_data(const int p_LSB, const int T_LSB, int * pressure, int
     C = out[2]; 
     
     *pressure = (int)(A + B / (C + p_LSB)); 
-    *temperature = (int)((-45.0f + 175.0f / 65536.f * T_LSB) * 100.0f);
 }

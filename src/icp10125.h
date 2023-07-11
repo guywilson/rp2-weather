@@ -13,6 +13,5 @@ int     icp10125_read_otp(void);
 void    icp10125_process_data(
                 const int p_LSB, 
                 const int T_LSB, 
-                int *pressure, 
-                int *temperature);
+                int *pressure);
 #endif
