@@ -9,6 +9,8 @@
 /*
 ** Supported log levels...
 */
+#define LOG_LEVEL_OFF           0x00
+
 #define LOG_LEVEL_INFO          0x01
 #define LOG_LEVEL_STATUS        0x02
 #define LOG_LEVEL_DEBUG         0x04
