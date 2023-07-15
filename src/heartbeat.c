@@ -7,30 +7,39 @@
 #include "taskdef.h"
 #include "gpio_def.h"
 
-#define HEARTBEAT_ON_TIME                25
-#define HEARBEAT_OFF_TIME               975
+#define HEARTBEAT_ON_TIME                20
+#define HEARTBEAT_OFF_TIME               980
+
+#define STATE_LED_ON_1                  0x0010
+#define STATE_LED_OFF_1                 0x0020
+#define STATE_LED_ON_2                  0x0030
+#define STATE_LED_OFF_2                 0x0040
 
 void HeartbeatTask(PTASKPARM p) {
-  static uint8_t on = 0;
+    static uint16_t state = STATE_LED_ON_1;
 
-  if (on) {
-    turnOff(ONBAORD_LED_PIN);
-    on = 0;
+    switch (state) {
+        case STATE_LED_ON_1:
+            turnOn(ONBAORD_LED_PIN);
+            state = STATE_LED_OFF_1;
+            scheduleTask(TASK_HEARTBEAT, rtc_val_ms(HEARTBEAT_ON_TIME), false, NULL);
+            break;
 
-    scheduleTask(
-            TASK_HEARTBEAT, 
-            rtc_val_ms(getCoreID() ? HEARBEAT_OFF_TIME : HEARTBEAT_ON_TIME), 
-            false,
-            NULL);
-  }
-  else {
-    turnOn(ONBAORD_LED_PIN);
-    on = 1;
+        case STATE_LED_OFF_1:
+            turnOff(ONBAORD_LED_PIN);
+            state = STATE_LED_ON_2;
+            scheduleTask(TASK_HEARTBEAT, rtc_val_ms(HEARTBEAT_OFF_TIME), false, NULL);
+            break;
 
-    scheduleTask(
-            TASK_HEARTBEAT, 
-            rtc_val_ms(getCoreID() ? HEARTBEAT_ON_TIME : HEARBEAT_OFF_TIME), 
-            false,
-            NULL);
-  }
+        case STATE_LED_ON_2:
+            turnOn(ONBAORD_LED_PIN);
+            state = STATE_LED_OFF_2;
+            scheduleTask(TASK_HEARTBEAT, rtc_val_ms(HEARTBEAT_ON_TIME), false, NULL);
+            break;
+
+        case STATE_LED_OFF_2:
+            turnOff(ONBAORD_LED_PIN);
+            state = STATE_LED_ON_1;
+            break;
+    }
 }

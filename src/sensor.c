@@ -330,6 +330,8 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_SEND_BEGIN:
             nRF24L01_powerUpTx(spi0);
 
+            scheduleTask(TASK_HEARTBEAT, rtc_val_ms(150), false, NULL);
+
             delay = rtc_val_ms(150);
             state = STATE_SEND_PACKET;
             break;

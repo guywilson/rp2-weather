@@ -210,6 +210,7 @@ void taskRainGuage(PTASKPARM p) {
     rainPulseBuffer[ix++] = 
                 (uint16_t)(pio_sm_get_rx_fifo_level(pio0, rainGaugeSM) * 
                                         RAIN_GAUGE_PULSE_COUNT_BIT_SHIFT);
+    
     pio_sm_clear_fifos(pio0, rainGaugeSM);
 
     for (i = 0;i < PIO_RAIN_PULSE_BUFFER_SIZE;i++) {
