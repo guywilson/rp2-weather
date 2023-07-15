@@ -8,7 +8,7 @@
 #include "gpio_def.h"
 
 #define HEARTBEAT_ON_TIME                20
-#define HEARTBEAT_OFF_TIME               980
+#define HEARTBEAT_OFF_TIME               480
 
 #define STATE_LED_ON_1                  0x0010
 #define STATE_LED_OFF_1                 0x0020
