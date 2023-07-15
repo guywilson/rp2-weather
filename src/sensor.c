@@ -330,8 +330,6 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_SEND_BEGIN:
             nRF24L01_powerUpTx(spi0);
 
-            scheduleTask(TASK_HEARTBEAT, rtc_val_ms(150), false, NULL);
-
             delay = rtc_val_ms(150);
             state = STATE_SEND_PACKET;
             break;
@@ -343,6 +341,8 @@ void taskI2CSensor(PTASKPARM p) {
                 count += sprintf(&szBuffer[count], "%02X", buffer[i]);
             }
             lgLogDebug("txBuffer: %s", szBuffer);
+
+            scheduleTask(TASK_HEARTBEAT, rtc_val_ms(5), false, NULL);
 
             nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
 
