@@ -206,7 +206,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             bytesRead = i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_ALS_DATA0, buffer, 3);
 
-            memset(&pWeather->rawALS_UV[0], 0, 5);
+            memset(&pWeather->rawALS_UV[0], 0, 6);
 
             if (bytesRead > 0) {
                 lgLogDebug("Rx: %02X %02X %02X", buffer[0], buffer[1], buffer[2]);
@@ -233,14 +233,12 @@ void taskI2CSensor(PTASKPARM p) {
 
             if (bytesRead > 0) {
                 lgLogDebug("Rx: %02X %02X %02X", buffer[0], buffer[1], buffer[2]);
-                pWeather->rawALS_UV[2] |= ((buffer[2] << 4) & 0xF0);
-                pWeather->rawALS_UV[3] = buffer[1];
-                pWeather->rawALS_UV[4] = buffer[0];
+                memcpy(&pWeather->rawALS_UV[3], buffer, 3);
 
-                memcpy(&lastPacket.rawALS_UV[2], &pWeather->rawALS_UV[2], 3);
+                memcpy(&lastPacket.rawALS_UV[3], &pWeather->rawALS_UV[3], 3);
             }
             else {
-                memcpy(&pWeather->rawALS_UV[2], &lastPacket.rawALS_UV[2], 3);
+                memcpy(&pWeather->rawALS_UV[3], &lastPacket.rawALS_UV[3], 3);
                 pWeather->status |= STATUS_BITS_LTR390_UVI_I2C_ERROR;
             }
 
