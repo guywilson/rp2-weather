@@ -43,24 +43,22 @@ typedef struct {                                    // O/S  - Description
                                                     // ----   ---------------------------------
     uint8_t             packetID;                   // 0x00 - Identify this as a weather packet
 
-    uint8_t             reserved;                   // 0x01 - Reserved
+    uint8_t             packetNum[3];               // 0x01 - Packet number (24-bit)
 
-    uint16_t            status;                     // 0x02 - Status bits
+    uint16_t            status;                     // 0x04 - Status bits
 
-    uint16_t            rawWindDir;                 // 0x04 - Raw ADC wind direction
+    uint16_t            rawWindDir;                 // 0x06 - Raw ADC wind direction
 
-    int16_t             rawTemperature;             // 0x06 - Raw I2C TMP117 value
-    uint32_t            rawICPPressure;             // 0x08 - Raw pressure from icp10125
-    uint16_t            rawHumidity;                // 0x0C - Raw I2C SHT4x value
-    uint8_t             rawALS_UV[6];               // 0x0E - Raw I2C LTR390 ALS & UV value
-    uint16_t            rawBatteryVolts;            // 0x14 - Raw I2C value for battery V
-    uint16_t            rawBatteryPercentage;       // 0x16 - Raw I2C value for battery %
+    int16_t             rawTemperature;             // 0x08 - Raw I2C TMP117 value
+    uint32_t            rawICPPressure;             // 0x0A - Raw pressure from icp10125
+    uint16_t            rawHumidity;                // 0x0E - Raw I2C SHT4x value
+    uint8_t             rawALS_UV[6];               // 0x10 - Raw I2C LTR390 ALS & UV value
+    uint16_t            rawBatteryVolts;            // 0x16 - Raw I2C value for battery V
+    uint16_t            rawBatteryPercentage;       // 0x18 - Raw I2C value for battery %
 
-    uint16_t            rawRainfall;                // 0x18 - Raw rain sensor count
-    uint16_t            rawWindspeed;               // 0x1A - Raw wind speed
-    uint16_t            rawWindGust;                // 0x1C - Raw wind gust speed
-
-    uint8_t             padding[2];
+    uint16_t            rawRainfall;                // 0x1A - Raw rain sensor count
+    uint16_t            rawWindspeed;               // 0x1C - Raw wind speed
+    uint16_t            rawWindGust;                // 0x1E - Raw wind gust speed
 }
 weather_packet_t;
 

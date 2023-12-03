@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <string.h>
 
 #include "hardware/address_mapped.h"
 #include "hardware/regs/tbman.h"
@@ -16,8 +17,15 @@ static inline uint16_t getChipID(void) {
 
 weather_packet_t * getWeatherPacket(void) {
     static weather_packet_t     weather;
+    static uint32_t             packetNum = 0;
 
     weather.packetID = PACKET_ID_WEATHER;
+    
+    packetNum &= 0x00FFFFFF;
+
+    memcpy(&weather.packetNum, &packetNum, 3);
+
+    packetNum++;
     
     return &weather;
 }

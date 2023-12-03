@@ -61,6 +61,7 @@
 static uint32_t         averageBuffer[PIO_AVG_BUFFER_SIZE];
 static uint             anemometerSM;
 static uint             rainGaugeSM;
+static bool             isPIOEnabled = false;
 
 void pioInit() {
     uint            anemometerOffset = PIO_ANEMOMETER_OFFSET;
@@ -98,6 +99,17 @@ void pioInit() {
 
     pio_sm_init(pio0, rainGaugeSM, rainGaugeOffset, &rainGaugeConfig);
     pio_sm_set_enabled(pio0, rainGaugeSM, true);
+
+    isPIOEnabled = true;
+}
+
+void disablePIO(void) {
+    if (isPIOEnabled) {
+        pio_sm_set_enabled(pio0, anemometerSM, false);
+        pio_sm_set_enabled(pio0, rainGaugeSM, false);
+
+        isPIOEnabled = false;
+    }
 }
 
 /*

@@ -14,6 +14,7 @@
 #include "rtc_rp2040.h"
 #include "sensor.h"
 #include "watchdog.h"
+#include "battery.h"
 #include "TMP117.h"
 #include "SHT4x.h"
 #include "icp10125.h"
@@ -31,8 +32,9 @@
 #define STATE_READ_PRESSURE_1       0x0300
 #define STATE_READ_PRESSURE_2       0x0301
 #define STATE_READ_PRESSURE_3       0x0302
-#define STATE_READ_ALS              0x0400
-#define STATE_READ_UVS              0x0410
+#define STATE_LTR390_ENABLE         0x0400
+#define STATE_READ_ALS              0x0410
+#define STATE_READ_UVS              0x0420
 #define STATE_READ_BATTERY_VOLTS    0x0500
 #define STATE_READ_BATTERY_PERCENT  0x0501
 #define STATE_READ_BATTERY_TEMP     0x0502
@@ -71,6 +73,7 @@ int initSensors(i2c_inst_t * i2c) {
 void taskI2CSensor(PTASKPARM p) {
     static int                  state = STATE_I2C_INIT;
     static int                  crcFailCount = 0;
+    static bool                 isLTR390Standby = false;
     static weather_packet_t     lastPacket;
     int                         i;
     int                         count = 0;
@@ -202,6 +205,27 @@ void taskI2CSensor(PTASKPARM p) {
             break;
 
         case STATE_READ_ALS:
+            if (getIsLowPowerMode() && !isLTR390Standby) {
+                input[0] = LTR390_CTRL_SENSOR_STANDBY;
+                i2cWriteRegister(i2c0, LTR390_ADDRESS, LTR390_REG_CTRL, input, 1);
+                isLTR390Standby = true;
+            }
+            else if (!getIsLowPowerMode() && isLTR390Standby) {
+                input[0] = LTR390_CTRL_SENSOR_ENABLE | LTR390_CTRL_UVS_MODE_ALS;
+                i2cWriteRegister(i2c0, LTR390_ADDRESS, LTR390_REG_CTRL, input, 1);
+                isLTR390Standby = false;
+
+                delay = rtc_val_ms(100);
+                state = STATE_READ_ALS;
+                break;
+            }
+
+            if (isLTR390Standby) {
+                delay = rtc_val_ms(1000);
+                state = STATE_READ_BATTERY_VOLTS;
+                break;
+            }
+
             lgLogDebug("Rd ALS");
 
             bytesRead = i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_ALS_DATA0, buffer, 3);
@@ -321,7 +345,14 @@ void taskI2CSensor(PTASKPARM p) {
                 pWeather->rawBatteryPercentage = lastPacket.rawBatteryPercentage;
             }
 
-            delay = rtc_val_ms(23600);
+            if (getIsLowPowerMode()) {
+                // 5 minute delay when in low power mode
+                delay = rtc_val_ms(293600);
+            }
+            else {
+                delay = rtc_val_ms(23600);
+            }
+
             state = STATE_SEND_BEGIN;
             break;
 

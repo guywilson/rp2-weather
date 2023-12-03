@@ -14,6 +14,7 @@
 #include "adc_rp2040.h"
 #include "rtc_rp2040.h"
 #include "i2c_rp2040.h"
+#include "pio_rp2040.h"
 #include "scheduler.h"
 #include "taskdef.h"
 #include "packet.h"
@@ -28,14 +29,21 @@
 #define STATE_RADIO_FINISH                  0x0300
 #define STATE_SLEEP                         0xFF00
 
-datetime_t                  dt;
-datetime_t                  alarm_dt;
+#define LOW_POWER_CLOCK_DIVISOR             5
+
+static datetime_t           dt;
+static datetime_t           alarm_dt;
+static bool                 isLowPowerMode = false;
 
 void wakeUp(void) {
 	/*
 	** Enable the watchdog, it will reset the device in 100ms...
 	*/
 	watchdog_enable(100, false);
+}
+
+bool getIsLowPowerMode(void) {
+    return isLowPowerMode;
 }
 
 void taskBatteryMonitor(PTASKPARM p) {
@@ -59,6 +67,22 @@ void taskBatteryMonitor(PTASKPARM p) {
         if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_CRITICAL && lastBatteryPct < BATTERY_PERCENTAGE_CRITICAL) {
             doSleep = true;
         }
+        else if (!isLowPowerMode) {
+            if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_LOW && lastBatteryPct < BATTERY_PERCENTAGE_LOW) {
+                /*
+                ** Stretch the RTC clock so it is slower, giving the
+                ** cpu more time to sleep between interrupts... 
+                */
+                setRTCFrequency(getRTCFrequency() / (double)LOW_POWER_CLOCK_DIVISOR);
+                isLowPowerMode = true;
+            }
+        }
+        else if (isLowPowerMode) {
+            if (pWeather->rawBatteryPercentage > BATTERY_PERCENTAGE_OK && lastBatteryPct > BATTERY_PERCENTAGE_OK) {
+                isLowPowerMode = false;
+                setRTCFrequency((double)RTC_CLOCK_FREQ);
+            }
+        }
     }
 
     lastBatteryPct = pWeather->rawBatteryPercentage;
@@ -70,9 +94,9 @@ void taskBatteryMonitor(PTASKPARM p) {
         ** 1. Send a final message back to the RPi base station
         ** 2. Disable the watchdog
         ** 3. Stop the scheduler (by stopping the scheduler tick timer)
-        ** 4. Disable the ADC, I2c & SPI
+        ** 4. Disable the ADC, I2c, SPI & PIO
         ** 5. Turn off all GPIO pins (including onboard LED)
-        ** 6. Setup the RTC and set a timer for 36 to 48 hours
+        ** 6. Setup the RTC and set a timer for 72 hours
         ** 7. Go to sleep zzzzzzzz
         */
         switch (state) {
@@ -85,7 +109,7 @@ void taskBatteryMonitor(PTASKPARM p) {
 
             case STATE_RADIO_SEND_PACKET:
                 pSleep->rawBatteryVolts = pWeather->rawBatteryVolts;
-                pSleep->sleepHours = 48;
+                pSleep->sleepHours = 72;
 
                 memcpy(&pSleep->rawALS_UV, pWeather->rawALS_UV, 5);
 
@@ -115,6 +139,8 @@ void taskBatteryMonitor(PTASKPARM p) {
                 hw_clear_bits(&spi0_hw->cr1, SPI_SSPCR1_SSE_BITS);
                 hw_clear_bits(&spi1_hw->cr1, SPI_SSPCR1_SSE_BITS);
 
+                disablePIO();
+                
                 gpio_put_masked(
                     SCHED_CPU0_TRACE | 
                     SCHED_CPU1_TRACE | 
@@ -135,11 +161,11 @@ void taskBatteryMonitor(PTASKPARM p) {
                 dt.sec = 0;
 
                 /*
-                ** Set an alarm 48 hours later...
+                ** Set an alarm 72 hours later...
                 */
                 alarm_dt.year = -1;
                 alarm_dt.month = -1;
-                alarm_dt.day = 3;
+                alarm_dt.day = 4;
                 alarm_dt.dotw = -1;
                 alarm_dt.hour = -1;
                 alarm_dt.min = -1;
