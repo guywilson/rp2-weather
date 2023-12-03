@@ -23,7 +23,9 @@ weather_packet_t * getWeatherPacket(void) {
     
     packetNum &= 0x00FFFFFF;
 
-    memcpy(&weather.packetNum, &packetNum, 3);
+    weather.packetNum[0] = (uint8_t)(packetNum & 0x000000FF);
+    weather.packetNum[1] = (uint8_t)((packetNum >> 8) & 0x000000FF);
+    weather.packetNum[2] = (uint8_t)((packetNum >> 16) & 0x000000FF);
 
     packetNum++;
     
