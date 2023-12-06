@@ -50,6 +50,18 @@
 static uint8_t              buffer[32];
 static char                 szBuffer[128];
 
+static void setPacketNumber(weather_packet_t * p) {
+    static uint32_t             packetNum = 0;
+
+    packetNum &= 0x00FFFFFF;
+
+    p->packetNum[0] = (uint8_t)(packetNum & 0x000000FF);
+    p->packetNum[1] = (uint8_t)((packetNum >> 8) & 0x000000FF);
+    p->packetNum[2] = (uint8_t)((packetNum >> 16) & 0x000000FF);
+
+    packetNum++;
+}
+
 int nullSetup(i2c_inst_t * i2c) {
     return 0;
 }
@@ -358,6 +370,8 @@ void taskI2CSensor(PTASKPARM p) {
 
         case STATE_SEND_BEGIN:
             nRF24L01_powerUpTx(spi0);
+
+            setPacketNumber(pWeather);
 
             delay = rtc_val_ms(150);
             state = STATE_SEND_PACKET;
