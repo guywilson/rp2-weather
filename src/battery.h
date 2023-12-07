@@ -9,7 +9,6 @@
 #define BATTERY_TEMPERATURE_CRITICAL       5120         // 40 degrees C
 #define BATTERY_TEMPERATURE_LIMIT          4800         // 37.5 degress C
 
-bool getIsLowPowerMode(void);
 void taskBatteryMonitor(PTASKPARM p);
 
 #endif

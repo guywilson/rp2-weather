@@ -29,21 +29,14 @@
 #define STATE_RADIO_FINISH                  0x0300
 #define STATE_SLEEP                         0xFF00
 
-#define LOW_POWER_CLOCK_DIVISOR             5
-
 static datetime_t           dt;
 static datetime_t           alarm_dt;
-static bool                 isLowPowerMode = false;
 
 void wakeUp(void) {
 	/*
 	** Enable the watchdog, it will reset the device in 100ms...
 	*/
 	watchdog_enable(100, false);
-}
-
-bool getIsLowPowerMode(void) {
-    return isLowPowerMode;
 }
 
 void taskBatteryMonitor(PTASKPARM p) {
@@ -66,22 +59,6 @@ void taskBatteryMonitor(PTASKPARM p) {
     if (runCount > 6) {
         if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_CRITICAL && lastBatteryPct < BATTERY_PERCENTAGE_CRITICAL) {
             doSleep = true;
-        }
-        else if (!isLowPowerMode) {
-            if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_LOW && lastBatteryPct < BATTERY_PERCENTAGE_LOW) {
-                /*
-                ** Stretch the RTC clock so it is slower, giving the
-                ** cpu more time to sleep between interrupts... 
-                */
-                setRTCFrequency(getRTCFrequency() / (double)LOW_POWER_CLOCK_DIVISOR);
-                isLowPowerMode = true;
-            }
-        }
-        else if (isLowPowerMode) {
-            if (pWeather->rawBatteryPercentage > BATTERY_PERCENTAGE_OK && lastBatteryPct > BATTERY_PERCENTAGE_OK) {
-                isLowPowerMode = false;
-                setRTCFrequency((double)RTC_CLOCK_FREQ);
-            }
         }
     }
 
@@ -140,7 +117,7 @@ void taskBatteryMonitor(PTASKPARM p) {
                 hw_clear_bits(&spi1_hw->cr1, SPI_SSPCR1_SSE_BITS);
 
                 disablePIO();
-                
+
                 gpio_put_masked(
                     SCHED_CPU0_TRACE | 
                     SCHED_CPU1_TRACE | 
