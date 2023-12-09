@@ -20,7 +20,7 @@ void        setRTCFrequency(double frequency);
 ** Convenience macros for scheduler time periods.
 ** The resolution of the scheduler is 100us...
 */
-#define rtc_val_ms(time_in_ms)				(uint32_t)((double)(time_in_ms) * (getRTCFrequency() / (double)1000))
+#define rtc_val_ms(time_in_ms)				(rtc_t)((double)(time_in_ms) * (getRTCFrequency() / (double)1000))
 
 #define rtc_val_sec(time_in_sec)			rtc_val_ms(time_in_sec * 1000)
 #define rtc_val_min(time_in_min)			rtc_val_sec(time_in_min * 60)
