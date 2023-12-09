@@ -82,13 +82,6 @@ typedef CPU_RATIO *	PCPU_RATIO;
 */
 #define RUN_NOW                 0
 
-/*
- * If, for example, you want a faster interrupt frequency for the
- * RTC tick task, set the prescaler here. If you want the interrupt
- * frequency and clock frequency to be the same, simply set this to 1...
- */
-#define RTC_INTERRUPT_PRESCALER			1
-
 /******************************************************************************
 **
 ** The real-time clock interrupt service routing

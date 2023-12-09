@@ -151,22 +151,7 @@ void _rtcISR()
 {
     gpio_put(SCHED_CPU0_TRACE, true);
 
-#if RTC_INTERRUPT_PRESCALER != 1
-	_tickCount++;
-
-	if (_tickCount == RTC_INTERRUPT_PRESCALER) {
-	    /*
-	    ** The RTC is incremented every 1ms,
-		** it is used to drive the real time clock
-		** for the scheduler...
-	    */
-		_realTimeClock++;
-
-		_tickCount = 0;
-	}
-#else
 	_realTimeClock++;
-#endif
 
 #ifdef SCHED_ENABLE_TICK_TASK
 	/*
@@ -699,9 +684,7 @@ void schedule()
 	** If no tasks have been registered, just loop until some are...
 	*/
 	while (td == NULL) {
-#ifdef PICO_MULTICORE
 		__wfi();
-#endif		
 	}
 
 	/*
@@ -765,7 +748,6 @@ void schedule()
 #ifdef UNIT_TEST_MODE
 		usleep(500L);
 #endif
-#ifdef PICO_MULTICORE
 		if (td == head) {
             gpio_put(SCHED_CPU0_TRACE, false);
 
@@ -775,6 +757,5 @@ void schedule()
 			*/
 			__wfi();
 		}
-#endif
 	}
 }

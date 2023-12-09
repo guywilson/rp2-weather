@@ -78,7 +78,7 @@ void taskADC(PTASKPARM p) {
                     ADC_CS_EN_BITS, 
                     ADC_CS_EN_BITS);
 
-            delay = rtc_val_ms(1);
+            delay = rtc_val_ms(10);
             state = STATE_ADC_RUN;
             break;
 
@@ -89,12 +89,12 @@ void taskADC(PTASKPARM p) {
                         (ADC_CHANNEL_WIND_DIR << ADC_CS_AINSEL_LSB | ADC_CS_START_ONCE_BITS), 
                         (ADC_CS_AINSEL_BITS | ADC_CS_START_ONCE_BITS));
                 
-                delay = rtc_val_ms(1);
+                delay = rtc_val_ms(10);
                 state = STATE_ADC_ACCUMULATE;
                 break;
             }
 
-            delay = rtc_val_ms(1);
+            delay = rtc_val_ms(10);
             break;
 
         case STATE_ADC_ACCUMULATE:
@@ -110,14 +110,14 @@ void taskADC(PTASKPARM p) {
                 if (sampleCount == ADC_SAMPLE_BUFFER_SIZE) {
                     sampleCount = 0;
 
-                    delay = rtc_val_ms(1);
+                    delay = rtc_val_ms(10);
                     state = STATE_ADC_FINISH;
                     break;
                 }
             }
 
             state = STATE_ADC_RUN;
-            delay = rtc_val_ms(1);
+            delay = rtc_val_ms(10);
             break;
 
         case STATE_ADC_FINISH:

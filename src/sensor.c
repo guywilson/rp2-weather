@@ -108,7 +108,7 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_SETUP_LC709203:
             lc709203_setup(i2c0);
 
-            delay = rtc_val_sec(5);
+            delay = rtc_val_sec(10);
             state = STATE_SETUP;
             break;
 
@@ -117,7 +117,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             pWeather->status = 0x0000;
 
-            delay = rtc_val_sec(5);
+            delay = rtc_val_sec(10);
             state = STATE_READ_TEMP;
             break;
 
@@ -147,7 +147,7 @@ void taskI2CSensor(PTASKPARM p) {
             i2cWriteTimeoutProtected(i2c0, SHT4X_ADDRESS, input, 1, true);
 
             state = STATE_READ_HUMIDITY_2;
-            delay = rtc_val_ms(12);
+            delay = rtc_val_ms(20);
             break;
 
         case STATE_READ_HUMIDITY_2:
@@ -165,7 +165,7 @@ void taskI2CSensor(PTASKPARM p) {
             }
 
             state = STATE_READ_PRESSURE_1;
-            delay = rtc_val_ms(988);
+            delay = rtc_val_ms(980);
             break;
 
         case STATE_READ_PRESSURE_1:
@@ -186,7 +186,7 @@ void taskI2CSensor(PTASKPARM p) {
             i2cWriteTimeoutProtected(i2c0, ICP10125_ADDRESS, input, 2, false);
 
             state = STATE_READ_PRESSURE_3;
-            delay = rtc_val_ms(25);
+            delay = rtc_val_ms(30);
             break;
 
         case STATE_READ_PRESSURE_3:
@@ -212,7 +212,7 @@ void taskI2CSensor(PTASKPARM p) {
             }
 
             state = STATE_READ_ALS;
-            delay = rtc_val_ms(925);
+            delay = rtc_val_ms(920);
             break;
 
         case STATE_READ_ALS:
@@ -335,7 +335,7 @@ void taskI2CSensor(PTASKPARM p) {
                 pWeather->rawBatteryPercentage = lastPacket.rawBatteryPercentage;
             }
 
-            delay = rtc_val_ms(23600);
+            delay = rtc_val_min(5);
 
             state = STATE_SEND_BEGIN;
             break;
@@ -361,7 +361,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
 
-            delay = rtc_val_ms(125);
+            delay = rtc_val_ms(130);
             state = STATE_SEND_FINISH;
             break;
 
@@ -381,7 +381,7 @@ void taskI2CSensor(PTASKPARM p) {
                 break;
             }
 
-            delay = rtc_val_ms(125);
+            delay = rtc_val_ms(120);
             state = STATE_READ_TEMP;
             break;
 
@@ -406,7 +406,7 @@ void taskI2CSensor(PTASKPARM p) {
             */
             triggerWatchdogReset();
 
-            delay = rtc_val_sec(5);
+            delay = rtc_val_sec(10);
             state = STATE_CRC_FAILURE_3;
             break;
     }
