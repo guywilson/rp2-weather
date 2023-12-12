@@ -214,7 +214,7 @@ void taskRainGuage(PTASKPARM p) {
     ** all we need to calculate the pulse count is 
     ** the number of entries in the FIFO x the bits per entry...
     */
-    pWeather->rawRainfall = 
+    pWeather->rawRainfall += 
                 (uint16_t)(pio_sm_get_rx_fifo_level(pio0, rainGaugeSM) * 
                                         RAIN_GAUGE_PULSE_COUNT_BIT_SHIFT);
     

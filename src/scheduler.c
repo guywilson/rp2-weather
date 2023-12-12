@@ -147,10 +147,7 @@ PTASKDESC                   core1TaskDescPool;
 ** Returns:		void 
 **
 ******************************************************************************/
-void _rtcISR()
-{
-    gpio_put(SCHED_CPU0_TRACE, true);
-
+void _rtcISR() {
 	_realTimeClock++;
 
 #ifdef SCHED_ENABLE_TICK_TASK
@@ -210,15 +207,9 @@ void _core1_main(void)
 	PTASKDESC			td = NULL;
 	uint32_t			data = 0;
 
-    gpio_init(SCHED_CPU1_TRACE);
-    gpio_set_function(SCHED_CPU1_TRACE, GPIO_FUNC_SIO);
-    gpio_set_dir(SCHED_CPU1_TRACE, true);
-
 	while (1) {
         data = multicore_fifo_pop_blocking();
     
-        gpio_put(SCHED_CPU1_TRACE, true);
-        
         td = (PTASKDESC)(data);
 
         /*
@@ -228,8 +219,6 @@ void _core1_main(void)
         td->run(td->pParameter);
         td->isAllocated = 0;
         isCoreOneBusy = false;
-
-        gpio_put(SCHED_CPU1_TRACE, false);        
 	}
 }
 #endif
@@ -418,10 +407,6 @@ printf("Allocated %d tasks\n", taskArrayLength);
 	*/
 	multicore_launch_core1(_core1_main);
 #endif
-
-    gpio_init(SCHED_CPU0_TRACE);
-    gpio_set_function(SCHED_CPU0_TRACE, GPIO_FUNC_SIO);
-    gpio_set_dir(SCHED_CPU0_TRACE, true);
 }
 
 /******************************************************************************
@@ -749,8 +734,6 @@ void schedule()
 		usleep(500L);
 #endif
 		if (td == head) {
-            gpio_put(SCHED_CPU0_TRACE, false);
-
 			/*
 			** If we've looped through all the registered tasks, sleep
 			** until the next interrupt to save power...

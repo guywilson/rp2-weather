@@ -18,6 +18,8 @@
 #define SCHED_CPU0_TRACE            14
 #define SCHED_CPU1_TRACE            15
 
+#define I2C_POWER_PIN               14
+
 #define ONBAORD_LED_PIN             PICO_DEFAULT_LED_PIN
 
 #endif

@@ -21,9 +21,12 @@
 #include "ltr390.h"
 #include "lc709203.h"
 #include "nRF24L01.h"
+#include "gpio_def.h"
 #include "utils.h"
 
 #define STATE_I2C_INIT              0x0001
+#define STATE_I2C_INIT2             0x0002
+#define STATE_START                 0x0003
 #define STATE_SETUP_LC709203        0x0010
 #define STATE_SETUP                 0x0020
 #define STATE_READ_TEMP             0x0100
@@ -83,7 +86,7 @@ int initSensors(i2c_inst_t * i2c) {
 }
 
 void taskI2CSensor(PTASKPARM p) {
-    static int                  state = STATE_I2C_INIT;
+    static int                  state = STATE_START;
     static int                  crcFailCount = 0;
     static weather_packet_t     lastPacket;
     int                         i;
@@ -98,10 +101,34 @@ void taskI2CSensor(PTASKPARM p) {
     weather_packet_t *          pWeather = getWeatherPacket();
 
     switch (state) {
+        case STATE_START:
+            memset(pWeather, 0, sizeof(weather_packet_t));
+
+            /*
+            ** Deliberately fall through...
+            */
+
         case STATE_I2C_INIT:
+#ifdef I2C_POWER_SAVE
+            /*
+            ** Turn on the I2C power...
+            */
+            gpio_put(I2C_POWER_PIN, true);
+
+            delay = rtc_val_sec(1);
+            state = STATE_I2C_INIT2;
+#else
             i2c_init(i2c0, 100000);
 
-            delay = rtc_val_ms(100);
+            delay = rtc_val_sec(1);
+            state = STATE_SETUP_LC709203;
+#endif
+            break;
+
+        case STATE_I2C_INIT2:
+            i2c_init(i2c0, 100000);
+
+            delay = rtc_val_sec(1);
             state = STATE_SETUP_LC709203;
             break;
 
@@ -114,8 +141,6 @@ void taskI2CSensor(PTASKPARM p) {
 
         case STATE_SETUP:
             initSensors(i2c0);
-
-            pWeather->status = 0x0000;
 
             delay = rtc_val_sec(10);
             state = STATE_READ_TEMP;
@@ -335,8 +360,23 @@ void taskI2CSensor(PTASKPARM p) {
                 pWeather->rawBatteryPercentage = lastPacket.rawBatteryPercentage;
             }
 
-            delay = rtc_val_min(5);
+#ifdef I2C_POWER_SAVE
+            /*
+            ** Turn off the I2C power...
+            */
+            i2c_deinit(i2c0);
+            gpio_put(I2C_POWER_PIN, false);
 
+            /*
+            ** Wait 5 minutes between packets...
+            */
+            delay = rtc_val_sec(272);
+#else
+            /*
+            ** Wait 5 minutes between packets...
+            */
+            delay = rtc_val_sec(293);
+#endif
             state = STATE_SEND_BEGIN;
             break;
 
@@ -356,6 +396,12 @@ void taskI2CSensor(PTASKPARM p) {
                 count += sprintf(&szBuffer[count], "%02X", buffer[i]);
             }
             lgLogDebug("txBuffer: %s", szBuffer);
+
+            /*
+            ** Reset the rainfall count so we start counting again
+            ** for the next message...
+            */
+            pWeather->rawRainfall = 0;
 
             scheduleTask(TASK_HEARTBEAT, rtc_val_ms(5), false, NULL);
 
@@ -382,7 +428,11 @@ void taskI2CSensor(PTASKPARM p) {
             }
 
             delay = rtc_val_ms(120);
+#ifdef I2C_POWER_SAVE
+            state = STATE_I2C_INIT;
+#else
             state = STATE_READ_TEMP;
+#endif
             break;
 
         case STATE_CRC_FAILURE_1:
