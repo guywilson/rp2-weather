@@ -53,6 +53,10 @@
 static uint8_t              buffer[32];
 static char                 szBuffer[128];
 
+int nullSetup(i2c_inst_t * i2c) {
+    return 0;
+}
+
 static void setPacketNumber(weather_packet_t * p) {
     static uint32_t             packetNum = 0;
 
@@ -65,14 +69,10 @@ static void setPacketNumber(weather_packet_t * p) {
     packetNum++;
 }
 
-int nullSetup(i2c_inst_t * i2c) {
-    return 0;
-}
-
-int initSensors(i2c_inst_t * i2c) {
+static int registerSensors(i2c_inst_t * i2c) {
     int         rtn = 0;
 
-    i2c_bus_init(i2c, 5);
+    i2c_bus_open(i2c, 5);
 
     i2c_bus_register_device(i2c, LC709203_ADDRESS, &nullSetup);
     i2c_bus_register_device(i2c, TMP117_ADDRESS, &tmp117_setup);
@@ -80,14 +80,13 @@ int initSensors(i2c_inst_t * i2c) {
     i2c_bus_register_device(i2c, ICP10125_ADDRESS, &icp10125_setup);
     i2c_bus_register_device(i2c, LTR390_ADDRESS, &ltr390_setup);
 
-    rtn = i2c_bus_setup(i2c);
-
     return rtn;
 }
 
 void taskI2CSensor(PTASKPARM p) {
     static int                  state = STATE_START;
     static int                  crcFailCount = 0;
+    static bool                 isLC709203Initialised = false;
     static weather_packet_t     lastPacket;
     int                         i;
     int                         count = 0;
@@ -102,6 +101,10 @@ void taskI2CSensor(PTASKPARM p) {
 
     switch (state) {
         case STATE_START:
+            lgLogDebug("I2C Start");
+
+            registerSensors(i2c0);
+
             memset(pWeather, 0, sizeof(weather_packet_t));
 
             /*
@@ -109,6 +112,8 @@ void taskI2CSensor(PTASKPARM p) {
             */
 
         case STATE_I2C_INIT:
+            lgLogDebug("I2C Init");
+
 #ifdef I2C_POWER_SAVE
             /*
             ** Turn on the I2C power...
@@ -117,30 +122,41 @@ void taskI2CSensor(PTASKPARM p) {
 
             delay = rtc_val_sec(1);
             state = STATE_I2C_INIT2;
-#else
-            i2c_init(i2c0, 100000);
-
-            delay = rtc_val_sec(1);
-            state = STATE_SETUP_LC709203;
-#endif
             break;
+#endif
+            /*
+            ** Deliberately fall through...
+            */
 
         case STATE_I2C_INIT2:
+            lgLogDebug("I2C Init2");
+
             i2c_init(i2c0, 100000);
 
             delay = rtc_val_sec(1);
-            state = STATE_SETUP_LC709203;
+
+            if (isLC709203Initialised) {
+                state = STATE_SETUP;
+            }
+            else {
+                state = STATE_SETUP_LC709203;
+            }
             break;
 
         case STATE_SETUP_LC709203:
+            lgLogDebug("LC Setup");
+
             lc709203_setup(i2c0);
+            isLC709203Initialised = true;
 
             delay = rtc_val_sec(10);
             state = STATE_SETUP;
             break;
 
         case STATE_SETUP:
-            initSensors(i2c0);
+            lgLogDebug("I2C Setup");
+
+            i2c_bus_setup(i2c0);
 
             delay = rtc_val_sec(10);
             state = STATE_READ_TEMP;
@@ -236,6 +252,10 @@ void taskI2CSensor(PTASKPARM p) {
                 pWeather->status |= STATUS_BITS_ICP10125_I2C_ERROR;
             }
 
+//            /*
+//            ** @todo skip over for oscilloscope debugging...
+//            */
+//            state = STATE_READ_BATTERY_VOLTS;
             state = STATE_READ_ALS;
             delay = rtc_val_ms(920);
             break;
@@ -370,12 +390,11 @@ void taskI2CSensor(PTASKPARM p) {
             /*
             ** Wait 5 minutes between packets...
             */
-            delay = rtc_val_sec(272);
+//            delay = rtc_val_sec(272);
+            delay = rtc_val_sec(32);
 #else
-            /*
-            ** Wait 5 minutes between packets...
-            */
-            delay = rtc_val_sec(293);
+//            delay = rtc_val_sec(293);
+            delay = rtc_val_sec(53);
 #endif
             state = STATE_SEND_BEGIN;
             break;
@@ -402,8 +421,6 @@ void taskI2CSensor(PTASKPARM p) {
             ** for the next message...
             */
             pWeather->rawRainfall = 0;
-
-            scheduleTask(TASK_HEARTBEAT, rtc_val_ms(5), false, NULL);
 
             nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
 

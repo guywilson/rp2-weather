@@ -87,7 +87,7 @@ bool i2cGetDeviceState(i2c_inst_t * i2c, uint address) {
     return false;
 }
 
-int i2c_bus_init(i2c_inst_t * i2c, int numDevices) {
+int i2c_bus_open(i2c_inst_t * i2c, int numDevices) {
     i2c_device_t *          devices;
 
     if (numDevices < I2C_BUS_MIN_DEVICES || numDevices > I2C_BUS_MAX_DEVICES) {
@@ -113,6 +113,22 @@ int i2c_bus_init(i2c_inst_t * i2c, int numDevices) {
     }
 
     memset(devices, 0, sizeof(i2c_device_t) * numDevices);
+
+    return 0;
+}
+
+int i2c_bus_close(i2c_inst_t * i2c) {
+    if (i2c == i2c0) {
+        free(devices_i2c0);
+        numDevicesOnBus[0] = 0;
+    }
+    else if (i2c == i2c1) {
+        free(devices_i2c1);
+        numDevicesOnBus[1] = 0;
+    }
+    else {
+        return -1;
+    }
 
     return 0;
 }

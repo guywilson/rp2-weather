@@ -42,8 +42,11 @@ void setup(void) {
 	setupRTC();
 	setupSerial();
 
-    gpio_set_function(I2C_SDA_ALT_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(I2C_SLK_ALT_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(I2C0_SDA_ALT_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(I2C0_SLK_ALT_PIN, GPIO_FUNC_I2C);
+
+    gpio_set_function(I2C1_SDA_ALT_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(I2C1_SLK_ALT_PIN, GPIO_FUNC_I2C);
 
 #ifdef I2C_POWER_SAVE
     gpio_init(I2C_POWER_PIN);
@@ -84,7 +87,7 @@ int main(void) {
 
 	scheduleTask(
 			TASK_HEARTBEAT,
-			rtc_val_ms(950),
+			rtc_val_ms(970),
             false,
 			NULL);
 

@@ -119,10 +119,9 @@ void taskBatteryMonitor(PTASKPARM p) {
                 disablePIO();
 
                 gpio_put_masked(
-                    SCHED_CPU0_TRACE | 
-                    SCHED_CPU1_TRACE | 
                     NRF24L01_SPI_PIN_CE | 
                     NRF24L01_SPI_PIN_CSN | 
+                    I2C0_POWER_PIN |
                     ONBAORD_LED_PIN,
                     0x00000000);
 

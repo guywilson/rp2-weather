@@ -134,7 +134,7 @@ void taskADC(PTASKPARM p) {
             pWeather->rawWindDir = sampleAvg >> 3;
             sampleAvg = 0;
 
-            lgLogDebug("Raw dir: %d", (int)pWeather->rawWindDir);
+//            lgLogDebug("Raw dir: %d", (int)pWeather->rawWindDir);
             for (j = 0;j < 16;j++) {
                 if (pWeather->rawWindDir < dir_adc_max[j]) {
                     lgLogDebug("Wind dir: %s", dir_ordinal[j]);

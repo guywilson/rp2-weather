@@ -187,9 +187,9 @@ void taskAnemometer(PTASKPARM p) {
             pWeather->rawWindGust = 
                 (uint16_t)(ANEMOMETER_KPH_FACTOR * (float)maxCount);
 
-            lgLogDebug("Spd:%.2f, Gst:%.2f", (float)pWeather->rawWindspeed * ANEMOMETER_MPH, (float)pWeather->rawWindGust * ANEMOMETER_MPH);
+//            lgLogDebug("Spd:%.2f, Gst:%.2f", (float)pWeather->rawWindspeed * ANEMOMETER_MPH, (float)pWeather->rawWindGust * ANEMOMETER_MPH);
 
-            lgLogDebug("Avg windspeed count: %d", pWeather->rawWindspeed);
+//            lgLogDebug("Avg windspeed count: %d", pWeather->rawWindspeed);
 
             memset(averageBuffer, 0, sizeof(uint32_t) * PIO_AVG_BUFFER_SIZE);
             totalCount = 0;
@@ -220,5 +220,5 @@ void taskRainGuage(PTASKPARM p) {
     
     pio_sm_clear_fifos(pio0, rainGaugeSM);
 
-    lgLogDebug("Rainfall count: %d", (int)pWeather->rawRainfall);
+//    lgLogDebug("Rainfall count: %d", (int)pWeather->rawRainfall);
 }
