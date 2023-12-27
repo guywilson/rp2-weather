@@ -74,7 +74,7 @@ int icp10125_setup(i2c_inst_t * i2c) {
     return 0;
 }
 
-int icp10125_read_otp(void) {
+int icp10125_read_otp(i2c_inst_t * i2c) {
     int                 error;
     int                 i;
     uint8_t             buffer[8];
@@ -85,7 +85,7 @@ int icp10125_read_otp(void) {
     buffer[3] = 0x66;
     buffer[4] = 0x9C;
 
-    error = i2cWriteTimeoutProtected(i2c0, ICP10125_ADDRESS, buffer, 5, false);
+    error = i2cWriteTimeoutProtected(i2c, ICP10125_ADDRESS, buffer, 5, false);
 
     if (error == PICO_ERROR_TIMEOUT) {
         return PICO_ERROR_TIMEOUT;
@@ -95,8 +95,8 @@ int icp10125_read_otp(void) {
         buffer[0] = 0xC7;
         buffer[1] = 0xF7;
 
-        i2cWriteTimeoutProtected(i2c0, ICP10125_ADDRESS, buffer, 2, false);
-        i2cReadTimeoutProtected(i2c0, ICP10125_ADDRESS, buffer, 3, false);
+        i2cWriteTimeoutProtected(i2c, ICP10125_ADDRESS, buffer, 2, false);
+        i2cReadTimeoutProtected(i2c, ICP10125_ADDRESS, buffer, 3, false);
 
         otpValues[i] = (uint16_t)((uint16_t)buffer[0] << 8 | (uint16_t)buffer[1]);
     }

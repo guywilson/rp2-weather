@@ -27,8 +27,9 @@
 #define STATE_I2C_INIT              0x0001
 #define STATE_I2C_INIT2             0x0002
 #define STATE_START                 0x0003
-#define STATE_SETUP_LC709203        0x0010
-#define STATE_SETUP                 0x0020
+#define STATE_SETUP_I2C0            0x0010
+#define STATE_SETUP_I2C1            0x0020
+#define STATE_SETUP_LC709203        0x0030
 #define STATE_READ_TEMP             0x0100
 #define STATE_READ_HUMIDITY_1       0x0200
 #define STATE_READ_HUMIDITY_2       0x0201
@@ -69,16 +70,25 @@ static void setPacketNumber(weather_packet_t * p) {
     packetNum++;
 }
 
-static int registerSensors(i2c_inst_t * i2c) {
+static int registerSensorsI2C0(void) {
     int         rtn = 0;
 
-    i2c_bus_open(i2c, 5);
+    i2c_bus_open(i2c0, 3);
 
-    i2c_bus_register_device(i2c, LC709203_ADDRESS, &nullSetup);
-    i2c_bus_register_device(i2c, TMP117_ADDRESS, &tmp117_setup);
-    i2c_bus_register_device(i2c, SHT4X_ADDRESS, &sht4x_setup);
-    i2c_bus_register_device(i2c, ICP10125_ADDRESS, &icp10125_setup);
-    i2c_bus_register_device(i2c, LTR390_ADDRESS, &ltr390_setup);
+    i2c_bus_register_device(i2c0, TMP117_ADDRESS, &tmp117_setup);
+    i2c_bus_register_device(i2c0, SHT4X_ADDRESS, &sht4x_setup);
+    i2c_bus_register_device(i2c0, ICP10125_ADDRESS, &icp10125_setup);
+
+    return rtn;
+}
+
+static int registerSensorsI2C1(void) {
+    int         rtn = 0;
+
+    i2c_bus_open(i2c1, 2);
+
+    i2c_bus_register_device(i2c1, LC709203_ADDRESS, &nullSetup);
+    i2c_bus_register_device(i2c1, LTR390_ADDRESS, &ltr390_setup);
 
     return rtn;
 }
@@ -86,7 +96,7 @@ static int registerSensors(i2c_inst_t * i2c) {
 void taskI2CSensor(PTASKPARM p) {
     static int                  state = STATE_START;
     static int                  crcFailCount = 0;
-    static bool                 isLC709203Initialised = false;
+    static bool                 isI2C1Initialised = false;
     static weather_packet_t     lastPacket;
     int                         i;
     int                         count = 0;
@@ -94,6 +104,7 @@ void taskI2CSensor(PTASKPARM p) {
     int                         p_LSB;
     int                         t_LSB;
     int                         icpPressure;
+    int                         error;
     uint8_t                     input[2];
     rtc_t                       delay;
 
@@ -103,7 +114,8 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_START:
             lgLogDebug("I2C Start");
 
-            registerSensors(i2c0);
+            registerSensorsI2C0();
+            registerSensorsI2C1();
 
             memset(pWeather, 0, sizeof(weather_packet_t));
 
@@ -118,7 +130,7 @@ void taskI2CSensor(PTASKPARM p) {
             /*
             ** Turn on the I2C power...
             */
-            gpio_put(I2C_POWER_PIN, true);
+            gpio_put(I2C0_POWER_PIN, true);
 
             delay = rtc_val_sec(1);
             state = STATE_I2C_INIT2;
@@ -131,14 +143,15 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_I2C_INIT2:
             lgLogDebug("I2C Init2");
 
-            i2c_init(i2c0, 100000);
+            i2c_init(i2c0, 400000);
 
             delay = rtc_val_sec(1);
 
-            if (isLC709203Initialised) {
-                state = STATE_SETUP;
+            if (isI2C1Initialised) {
+                state = STATE_SETUP_I2C0;
             }
             else {
+                i2c_init(i2c1, 100000);
                 state = STATE_SETUP_LC709203;
             }
             break;
@@ -146,19 +159,39 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_SETUP_LC709203:
             lgLogDebug("LC Setup");
 
-            lc709203_setup(i2c0);
-            isLC709203Initialised = true;
+            lc709203_setup(i2c1);
 
             delay = rtc_val_sec(10);
-            state = STATE_SETUP;
+            state = STATE_SETUP_I2C0;
             break;
 
-        case STATE_SETUP:
-            lgLogDebug("I2C Setup");
+        case STATE_SETUP_I2C0:
+            lgLogDebug("I2C0 Setup");
 
             i2c_bus_setup(i2c0);
 
-            delay = rtc_val_sec(10);
+            if (isI2C1Initialised) {
+                state = STATE_READ_TEMP;
+                delay = rtc_val_sec(10);
+            }
+            else {
+                state = STATE_SETUP_I2C1;
+                delay = rtc_val_ms(50);
+            }
+            break;
+
+        case STATE_SETUP_I2C1:
+            lgLogDebug("I2C1 Setup");
+
+            error = i2c_bus_setup(i2c1);
+
+            if (error) {
+                lgLogError("Error setting up i2c1");
+            }
+
+            isI2C1Initialised = true;
+
+            delay = rtc_val_ms(50);
             state = STATE_READ_TEMP;
             break;
 
@@ -212,7 +245,7 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_PRESSURE_1:
             lgLogDebug("Rd P1");
 
-            icp10125_read_otp();
+            icp10125_read_otp(i2c0);
 
             state = STATE_READ_PRESSURE_2;
             delay = rtc_val_ms(50);
@@ -263,7 +296,7 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_ALS:
             lgLogDebug("Rd ALS");
 
-            bytesRead = i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_ALS_DATA0, buffer, 3);
+            bytesRead = i2cReadRegister(i2c1, LTR390_ADDRESS, LTR390_REG_ALS_DATA0, buffer, 3);
 
             memset(&pWeather->rawALS_UV[0], 0, 6);
 
@@ -274,12 +307,13 @@ void taskI2CSensor(PTASKPARM p) {
                 memcpy(&lastPacket.rawALS_UV[0], &pWeather->rawALS_UV[0], 3);
             }
             else {
+                lgLogError("ALS Error");
                 memcpy(&pWeather->rawALS_UV[0], &lastPacket.rawALS_UV[0], 3);
                 pWeather->status |= STATUS_BITS_LTR390_ALS_I2C_ERROR;
             }
 
             input[0] = LTR390_CTRL_SENSOR_ENABLE | LTR390_CTRL_UVS_MODE_UVS;
-            i2cWriteRegister(i2c0, LTR390_ADDRESS, LTR390_REG_CTRL, input, 1);
+            i2cWriteRegister(i2c1, LTR390_ADDRESS, LTR390_REG_CTRL, input, 1);
 
             delay = rtc_val_ms(1000);
             state = STATE_READ_UVS;
@@ -288,7 +322,7 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_UVS:
             lgLogDebug("Rd UVS");
 
-            bytesRead = i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_UVS_DATA0, buffer, 3);
+            bytesRead = i2cReadRegister(i2c1, LTR390_ADDRESS, LTR390_REG_UVS_DATA0, buffer, 3);
 
             if (bytesRead > 0) {
                 lgLogDebug("Rx: %02X %02X %02X", buffer[0], buffer[1], buffer[2]);
@@ -302,7 +336,7 @@ void taskI2CSensor(PTASKPARM p) {
             }
 
             input[0] = LTR390_CTRL_SENSOR_ENABLE | LTR390_CTRL_UVS_MODE_ALS;
-            i2cWriteRegister(i2c0, LTR390_ADDRESS, LTR390_REG_CTRL, input, 1);
+            i2cWriteRegister(i2c1, LTR390_ADDRESS, LTR390_REG_CTRL, input, 1);
 
             delay = rtc_val_ms(1000);
             state = STATE_READ_BATTERY_VOLTS;
@@ -311,7 +345,7 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_BATTERY_VOLTS:
             lgLogDebug("Rd BV");
             
-            bytesRead = lc709203_read_register(i2c0, LC709203_CMD_CELL_VOLTAGE, &pWeather->rawBatteryVolts);
+            bytesRead = lc709203_read_register(i2c1, LC709203_CMD_CELL_VOLTAGE, &pWeather->rawBatteryVolts);
 
             lgLogDebug("LC Bytes read: %d", bytesRead);
 
@@ -349,7 +383,7 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_READ_BATTERY_PERCENT:
             lgLogDebug("Rd BP");
 
-            bytesRead = lc709203_read_register(i2c0, LC709203_CMD_ITE, &pWeather->rawBatteryPercentage);
+            bytesRead = lc709203_read_register(i2c1, LC709203_CMD_ITE, &pWeather->rawBatteryPercentage);
 
             lgLogDebug("LC Bytes read: %d", bytesRead);
 
@@ -385,16 +419,16 @@ void taskI2CSensor(PTASKPARM p) {
             ** Turn off the I2C power...
             */
             i2c_deinit(i2c0);
-            gpio_put(I2C_POWER_PIN, false);
+            gpio_put(I2C0_POWER_PIN, false);
 
             /*
             ** Wait 5 minutes between packets...
             */
-//            delay = rtc_val_sec(272);
-            delay = rtc_val_sec(32);
+            delay = rtc_val_sec(272);
+//            delay = rtc_val_sec(32);
 #else
-//            delay = rtc_val_sec(293);
-            delay = rtc_val_sec(53);
+            delay = rtc_val_sec(293);
+//            delay = rtc_val_sec(53);
 #endif
             state = STATE_SEND_BEGIN;
             break;

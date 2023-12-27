@@ -23,6 +23,7 @@ add_compile_options(-Wall
         -Wno-unused-function # we have some for the docs that aren't called
         -Wno-maybe-uninitialized
         -DPICO_MULTICORE
+        -DI2C_POWER_SAVE
         )
 
 if (PICO_ON_DEVICE)

@@ -17,30 +17,33 @@
 #include "gpio_def.h"
 
 #define I2C_BUS_MIN_DEVICES              1
-#define I2C_BUS_MAX_DEVICES             16
+#define I2C_BUS_MAX_DEVICES              8
 #define I2C_TIMEOUT_US                2500
 
-static i2c_device_t *       devices_i2c0;
-static i2c_device_t *       devices_i2c1;
+static i2c_device_t         devices_i2c0[I2C_BUS_MAX_DEVICES];
+static i2c_device_t         devices_i2c1[I2C_BUS_MAX_DEVICES];
 
 static int                  numDevicesOnBus[2];
 
 static i2c_device_t * i2cGetDeviceByAddress(i2c_inst_t * i2c, uint address) {
     i2c_device_t *          devices;
     i2c_device_t *          device;
+    int                     numDevices;
     int                     i;
 
     if (i2c == i2c0) {
         devices = devices_i2c0;
+        numDevices = numDevicesOnBus[0];
     }
     else if (i2c == i2c1) {
         devices = devices_i2c1;
+        numDevices = numDevicesOnBus[1];
     }
     else {
         return NULL;
     }
 
-    for (i = 0;i < numDevicesOnBus[i2c == i2c0 ? 0 : 1];i++) {
+    for (i = 0;i < numDevices;i++) {
         device = &devices[i];
 
         if (device->address == address) {
@@ -95,12 +98,10 @@ int i2c_bus_open(i2c_inst_t * i2c, int numDevices) {
     }
 
     if (i2c == i2c0) {
-        devices_i2c0 = (i2c_device_t *)malloc(sizeof(i2c_device_t) * numDevices);
         devices = devices_i2c0;
         numDevicesOnBus[0] = numDevices;
     }
     else if (i2c == i2c1) {
-        devices_i2c1 = (i2c_device_t *)malloc(sizeof(i2c_device_t) * numDevices);
         devices = devices_i2c1;
         numDevicesOnBus[1] = numDevices;
     }
@@ -119,11 +120,9 @@ int i2c_bus_open(i2c_inst_t * i2c, int numDevices) {
 
 int i2c_bus_close(i2c_inst_t * i2c) {
     if (i2c == i2c0) {
-        free(devices_i2c0);
         numDevicesOnBus[0] = 0;
     }
     else if (i2c == i2c1) {
-        free(devices_i2c1);
         numDevicesOnBus[1] = 0;
     }
     else {
@@ -134,29 +133,36 @@ int i2c_bus_close(i2c_inst_t * i2c) {
 }
 
 int i2c_bus_register_device(i2c_inst_t * i2c, const uint address, int (* setup)(i2c_inst_t *)) {
-    static int              busIndex = 0;
+    static int              busIndex0 = 0;
+    static int              busIndex1 = 0;
+    int *                   busIndex;
+    int                     numDevices;
     i2c_device_t *          devices;
-
-    if (busIndex >= numDevicesOnBus[i2c == i2c0 ? 0 : 1]) {
-        return PICO_ERROR_GENERIC;
-    }
 
     if (i2c == i2c0) {
         devices = devices_i2c0;
+        busIndex = &busIndex0;
+        numDevices = numDevicesOnBus[0];
     }
     else if (i2c == i2c1) {
         devices = devices_i2c1;
+        busIndex = &busIndex1;
+        numDevices = numDevicesOnBus[1];
     }
     else {
         return -1;
     }
 
-    devices[busIndex].address = address;
-    devices[busIndex].isActive = true;
-    devices[busIndex].lastStateTime = 0;
-    devices[busIndex].setup = setup;
+    if (*busIndex >= numDevices) {
+        return PICO_ERROR_GENERIC;
+    }
 
-    busIndex++;
+    devices[*busIndex].address = address;
+    devices[*busIndex].isActive = true;
+    devices[*busIndex].lastStateTime = 0;
+    devices[*busIndex].setup = setup;
+
+    (*busIndex)++;
 
     return 0;
 }
@@ -165,18 +171,21 @@ int i2c_bus_setup(i2c_inst_t * i2c) {
     i2c_device_t *          devices;
     int                     i;
     int                     error = 0;
+    int                     numDevices;
 
     if (i2c == i2c0) {
         devices = devices_i2c0;
+        numDevices = numDevicesOnBus[0];
     }
     else if (i2c == i2c1) {
         devices = devices_i2c1;
+        numDevices = numDevicesOnBus[1];
     }
     else {
         return -1;
     }
 
-    for (i = 0;i < numDevicesOnBus[i2c == i2c0 ? 0 : 1];i++) {
+    for (i = 0;i < numDevices;i++) {
         error |= devices[i].setup(i2c);
     }
 
@@ -238,8 +247,19 @@ int i2cWriteTimeoutProtected(
     if (i2cGetDeviceState(i2c, address)) {
         error = i2c_write_timeout_us(i2c, address, src, len, nostop, I2C_TIMEOUT_US);
 
-        if (error == PICO_ERROR_GENERIC) {
-            i2cSetDeviceState(i2c, address, false);
+        switch (error) {
+            case PICO_ERROR_GENERIC:
+                lgLogError("Generic I2C error writing to addr: 0x%02X", address);
+                i2cSetDeviceState(i2c, address, false);
+                break;
+
+            case PICO_ERROR_TIMEOUT:
+                lgLogError("I2C timeout writing to addr: 0x%02X", address);
+                break;
+
+            default:
+                lgLogDebug("Written %d bytes to addr: 0x%02X", error, address);
+                break;
         }
     }
     else {
@@ -248,15 +268,25 @@ int i2cWriteTimeoutProtected(
         if (getRTCClock() > (device->lastStateTime + rtc_val_sec(5))) {
             error = i2c_write_timeout_us(i2c, address, src, len, nostop, I2C_TIMEOUT_US);
 
-            if (error == PICO_ERROR_GENERIC) {
-                /*
-                ** This will reset the clock so we don't 
-                ** immediately try again
-                */
-                i2cSetDeviceState(i2c, address, false);
-            }
-            else {
-                i2cSetDeviceState(i2c, address, true);
+            switch (error) {
+                case PICO_ERROR_GENERIC:
+                    lgLogError("Generic I2C error writing to addr: 0x%02X", address);
+                    /*
+                    ** This will reset the clock so we don't 
+                    ** immediately try again
+                    */
+                    i2cSetDeviceState(i2c, address, false);
+                    break;
+
+                case PICO_ERROR_TIMEOUT:
+                    lgLogError("I2C timeout writing to addr: 0x%02X", address);
+                    i2cSetDeviceState(i2c, address, true);
+                    break;
+
+                default:
+                    lgLogDebug("Written %d bytes to addr: 0x%02X", error, address);
+                    i2cSetDeviceState(i2c, address, true);
+                    break;
             }
         }
         else {
@@ -282,6 +312,20 @@ int i2cWriteRegister(
 
     bytesWritten = i2c_write_timeout_us(i2c, addr, msg, (length + 1), false, I2C_TIMEOUT_US);
 
+    switch (bytesWritten) {
+        case PICO_ERROR_GENERIC:
+            lgLogError("Generic I2C error writing to addr: 0x%02X", addr);
+            break;
+
+        case PICO_ERROR_TIMEOUT:
+            lgLogError("I2C timeout writing to addr: 0x%02X", addr);
+            break;
+
+        default:
+            lgLogDebug("Written %d bytes to addr: 0x%02X", bytesWritten, addr);
+            break;
+    }
+
     return bytesWritten;
 }
 
@@ -293,11 +337,41 @@ int i2cReadRegister(
             const uint8_t length)
 {
     int     bytesRead = 0;
+    int     error = 0;
     uint8_t regid = reg;
 
     // Read data from register(s) over I2C
-    i2c_write_timeout_us(i2c, addr, &regid, 1, true, I2C_TIMEOUT_US);
+    error = i2c_write_timeout_us(i2c, addr, &regid, 1, true, I2C_TIMEOUT_US);
+
+    switch (error) {
+        case PICO_ERROR_GENERIC:
+            lgLogError("Generic I2C error writing to addr: 0x%02X", addr);
+            break;
+
+        case PICO_ERROR_TIMEOUT:
+            lgLogError("I2C timeout writing to addr: 0x%02X", addr);
+            break;
+
+        default:
+            lgLogDebug("Written %d bytes to addr: 0x%02X", error, addr);
+            break;
+    }
+
     bytesRead = i2cReadTimeoutProtected(i2c, addr, data, length, false);
+
+    switch (bytesRead) {
+        case PICO_ERROR_GENERIC:
+            lgLogError("Generic I2C error reading from addr: 0x%02X", addr);
+            break;
+
+        case PICO_ERROR_TIMEOUT:
+            lgLogError("I2C timeout reading from addr: 0x%02X", addr);
+            break;
+
+        default:
+            lgLogDebug("Read %d bytes from addr: 0x%02X", bytesRead, addr);
+            break;
+    }
 
     return bytesRead;
 }

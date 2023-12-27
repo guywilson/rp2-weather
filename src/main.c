@@ -49,9 +49,9 @@ void setup(void) {
     gpio_set_function(I2C1_SLK_ALT_PIN, GPIO_FUNC_I2C);
 
 #ifdef I2C_POWER_SAVE
-    gpio_init(I2C_POWER_PIN);
-    gpio_set_function(I2C_POWER_PIN, GPIO_FUNC_SIO);
-    gpio_set_dir(I2C_POWER_PIN, true);
+    gpio_init(I2C0_POWER_PIN);
+    gpio_set_function(I2C0_POWER_PIN, GPIO_FUNC_SIO);
+    gpio_set_dir(I2C0_POWER_PIN, true);
 #endif
 
 //    lgOpen(uart0, LOG_LEVEL_FATAL | LOG_LEVEL_ERROR | LOG_LEVEL_STATUS | LOG_LEVEL_DEBUG | LOG_LEVEL_INFO);
