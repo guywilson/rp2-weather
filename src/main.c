@@ -31,7 +31,16 @@
 #include "utils.h"
 #include "gpio_def.h"
 
-void setup(void) {
+void taskDebugCheck(PTASKPARM p) {
+    if (isDebugActive()) {
+        lgSetLogLevel(LOG_LEVEL_FATAL | LOG_LEVEL_ERROR | LOG_LEVEL_STATUS | LOG_LEVEL_DEBUG | LOG_LEVEL_INFO);
+    }
+    else {
+        lgSetLogLevel(LOG_LEVEL_OFF);
+    }
+}
+
+static void setup(void) {
 	/*
 	** Disable the Watchdog, if we have restarted due to a
 	** watchdog reset, we want to enable it when we're ready...
@@ -39,6 +48,7 @@ void setup(void) {
 	watchdog_disable();
 
 	setupLEDPin();
+    setupDebugPin();
 	setupRTC();
 	setupSerial();
 
@@ -54,8 +64,12 @@ void setup(void) {
     gpio_set_dir(I2C0_POWER_PIN, true);
 #endif
 
-//    lgOpen(uart0, LOG_LEVEL_FATAL | LOG_LEVEL_ERROR | LOG_LEVEL_STATUS | LOG_LEVEL_DEBUG | LOG_LEVEL_INFO);
-    lgOpen(uart0, LOG_LEVEL_OFF);
+    if (isDebugActive()) {
+        lgOpen(uart0, LOG_LEVEL_FATAL | LOG_LEVEL_ERROR | LOG_LEVEL_STATUS | LOG_LEVEL_DEBUG | LOG_LEVEL_INFO);
+    }
+    else {
+        lgOpen(uart0, LOG_LEVEL_OFF);
+    }
 
     adcInit();
     pioInit();
@@ -74,7 +88,7 @@ int main(void) {
         isWatchdogReboot = true;
 	}
 
-	initScheduler(8);
+	initScheduler(9);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &taskWatchdog);
@@ -84,10 +98,11 @@ int main(void) {
     registerTask(TASK_ANEMOMETER, &taskAnemometer);
     registerTask(TASK_RAIN_GAUGE, &taskRainGuage);
     registerTask(TASK_BATTERY_MONITOR, &taskBatteryMonitor);
+    registerTask(TASK_DEBUG_CHECK, &taskDebugCheck);
 
 	scheduleTask(
 			TASK_HEARTBEAT,
-			rtc_val_ms(970),
+			rtc_val_ms(980),
             false,
 			NULL);
 
@@ -129,6 +144,12 @@ int main(void) {
 	scheduleTask(
 			TASK_WATCHDOG, 
 			rtc_val_ms(50), 
+            true, 
+			NULL);
+
+	scheduleTask(
+			TASK_DEBUG_CHECK, 
+			rtc_val_sec(1), 
             true, 
 			NULL);
 

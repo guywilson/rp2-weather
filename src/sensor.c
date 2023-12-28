@@ -424,11 +424,19 @@ void taskI2CSensor(PTASKPARM p) {
             /*
             ** Wait 5 minutes between packets...
             */
-            delay = rtc_val_sec(272);
-//            delay = rtc_val_sec(32);
+            if (isDebugActive()) {
+                delay = rtc_val_sec(32);
+            }
+            else {
+                delay = rtc_val_sec(272);
+            }
 #else
-            delay = rtc_val_sec(293);
-//            delay = rtc_val_sec(53);
+            if (isDebugActive()) {
+                delay = rtc_val_sec(53);
+            }
+            else {
+                delay = rtc_val_sec(293);
+            }
 #endif
             state = STATE_SEND_BEGIN;
             break;

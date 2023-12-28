@@ -20,6 +20,8 @@
 
 #define I2C0_POWER_PIN              11
 
+#define DEBUG_ENABLE_PIN            12
+
 #define ONBAORD_LED_PIN             PICO_DEFAULT_LED_PIN
 
 #endif

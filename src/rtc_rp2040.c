@@ -37,7 +37,9 @@ void rtcDelay(uint32_t delay_us) {
     startTime = timer_hw->timerawl;
     endTime = startTime + delay_us;
 
-    while (timer_hw->timerawl < endTime);
+    while (timer_hw->timerawl < endTime) {
+        asm("NOP");
+    }
 }
 
 static void irqTick(void) {
