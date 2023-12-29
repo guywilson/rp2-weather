@@ -216,24 +216,6 @@ int nRF24L01_setup(spi_inst_t * spi) {
     int             error = 0;
     uint8_t         statusReg = 0;
 
-	/*
-	** SPI CSn
-	*/
-	gpio_init(NRF24L01_SPI_PIN_CSN);
-	gpio_set_dir(NRF24L01_SPI_PIN_CSN, true);
-	gpio_put(NRF24L01_SPI_PIN_CSN, true);
-
-	/*
-	** SPI CE
-	*/
-	gpio_init(NRF24L01_SPI_PIN_CE);
-	gpio_set_dir(NRF24L01_SPI_PIN_CE, true);
-	gpio_put(NRF24L01_SPI_PIN_CE, false);
-
-	gpio_set_function(NRF24L01_SPI_PIN_MOSI, GPIO_FUNC_SPI);	// SPI TX
-	gpio_set_function(NRF24L01_SPI_PIN_MISO, GPIO_FUNC_SPI);	// SPI RX
-	gpio_set_function(NRF24L01_SPI_PIN_SCK, GPIO_FUNC_SPI);	    // SPI SCK
-
     sleep_ms(100);
 
     nRF24L01_writeRegister(

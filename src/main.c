@@ -52,9 +52,29 @@ static void setup(void) {
 	setupRTC();
 	setupSerial();
 
+	/*
+	** SPI CSn
+	*/
+	gpio_init(NRF24L01_SPI_PIN_CSN);
+	gpio_set_dir(NRF24L01_SPI_PIN_CSN, true);
+	gpio_put(NRF24L01_SPI_PIN_CSN, true);
+
+	/*
+	** SPI CE
+	*/
+	gpio_init(NRF24L01_SPI_PIN_CE);
+	gpio_set_dir(NRF24L01_SPI_PIN_CE, true);
+	gpio_put(NRF24L01_SPI_PIN_CE, false);
+
+	gpio_set_function(NRF24L01_SPI_PIN_MOSI, GPIO_FUNC_SPI);	// SPI TX
+	gpio_set_function(NRF24L01_SPI_PIN_MISO, GPIO_FUNC_SPI);	// SPI RX
+	gpio_set_function(NRF24L01_SPI_PIN_SCK, GPIO_FUNC_SPI);	    // SPI SCK
+
+    /*
+    ** I2C bus pins...
+    */
     gpio_set_function(I2C0_SDA_ALT_PIN, GPIO_FUNC_I2C);
     gpio_set_function(I2C0_SLK_ALT_PIN, GPIO_FUNC_I2C);
-
     gpio_set_function(I2C1_SDA_ALT_PIN, GPIO_FUNC_I2C);
     gpio_set_function(I2C1_SLK_ALT_PIN, GPIO_FUNC_I2C);
 
@@ -64,12 +84,7 @@ static void setup(void) {
     gpio_set_dir(I2C0_POWER_PIN, true);
 #endif
 
-    if (isDebugActive()) {
-        lgOpen(uart0, LOG_LEVEL_FATAL | LOG_LEVEL_ERROR | LOG_LEVEL_STATUS | LOG_LEVEL_DEBUG | LOG_LEVEL_INFO);
-    }
-    else {
-        lgOpen(uart0, LOG_LEVEL_OFF);
-    }
+    lgOpen(uart0, LOG_LEVEL_OFF);
 
     adcInit();
     pioInit();
