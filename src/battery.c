@@ -118,12 +118,11 @@ void taskBatteryMonitor(PTASKPARM p) {
 
                 disablePIO();
 
-                gpio_put_masked(
-                    NRF24L01_SPI_PIN_CE | 
-                    NRF24L01_SPI_PIN_CSN | 
-                    I2C0_POWER_PIN |
-                    ONBAORD_LED_PIN,
-                    0x00000000);
+                gpio_clr_mask(
+                        (1 << ONBAORD_LED_PIN)      | 
+                        (1 << I2C0_POWER_PIN)       | 
+                        (1 << NRF24L01_SPI_PIN_CE)  | 
+                        (1 << NRF24L01_SPI_PIN_CSN));
 
                 /*
                 ** Set the date as midnight 1st Jan 2023...
