@@ -16,7 +16,7 @@
 #include "watchdog.h"
 #include "battery.h"
 #include "TMP117.h"
-#include "SHT4x.h"
+#include "SHT4X.h"
 #include "icp10125.h"
 #include "ltr390.h"
 #include "lc709203.h"
