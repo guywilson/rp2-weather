@@ -48,6 +48,7 @@ void taskBatteryMonitor(PTASKPARM p) {
     rtc_t                       delay = rtc_val_sec(10);
     sleep_packet_t *            pSleep;
     weather_packet_t *          pWeather;
+    int                         i;
     
     pWeather = getWeatherPacket();
     pSleep = getSleepPacket();
@@ -108,6 +109,8 @@ void taskBatteryMonitor(PTASKPARM p) {
                 watchdog_disable();
                 disableRTC();
                 
+                multicore_reset_core1();
+                
                 adc_hw->cs = 0x00000000;
                 
                 i2c0->hw->enable = 0;
@@ -118,11 +121,15 @@ void taskBatteryMonitor(PTASKPARM p) {
 
                 disablePIO();
 
-                gpio_clr_mask(
-                        (1 << ONBAORD_LED_PIN)      | 
-                        (1 << I2C0_POWER_PIN)       | 
-                        (1 << NRF24L01_SPI_PIN_CE)  | 
-                        (1 << NRF24L01_SPI_PIN_CSN));
+                /*
+                ** Claim all GPIOs as outputs and drive them all low...
+                */
+                for (i = 0;i < 29;i++) {
+                    gpio_set_function((uint)i, GPIO_FUNC_SIO);
+                }
+
+                gpio_set_dir_out_masked(0x3FFFFFFF);
+                gpio_clr_mask(0x3FFFFFFF);
 
                 /*
                 ** Set the date as midnight 1st Jan 2023...

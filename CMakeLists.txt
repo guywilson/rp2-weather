@@ -23,7 +23,6 @@ add_compile_options(-Wall
         -Wno-unused-function # we have some for the docs that aren't called
         -Wno-maybe-uninitialized
         -DPICO_MULTICORE
-        -DI2C_POWER_SAVE
         )
 
 if (PICO_ON_DEVICE)
@@ -46,6 +45,7 @@ if (PICO_ON_DEVICE)
             src/icp10125.c
             src/ltr390.c
             src/lc709203.c
+            src/max17048.c
             src/nRF24L01.c
             src/heartbeat.c
             src/battery.c

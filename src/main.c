@@ -31,6 +31,8 @@
 #include "utils.h"
 #include "gpio_def.h"
 
+//#define ENABLE_BATTERY_MONITOR
+
 void taskDebugCheck(PTASKPARM p) {
     if (isDebugActive()) {
         lgSetLogLevel(LOG_LEVEL_FATAL | LOG_LEVEL_ERROR | LOG_LEVEL_STATUS | LOG_LEVEL_DEBUG | LOG_LEVEL_INFO);
@@ -75,14 +77,8 @@ static void setup(void) {
     */
     gpio_set_function(I2C0_SDA_ALT_PIN, GPIO_FUNC_I2C);
     gpio_set_function(I2C0_SLK_ALT_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(I2C1_SDA_ALT_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(I2C1_SLK_ALT_PIN, GPIO_FUNC_I2C);
-
-#ifdef I2C_POWER_SAVE
-    gpio_init(I2C0_POWER_PIN);
-    gpio_set_function(I2C0_POWER_PIN, GPIO_FUNC_SIO);
-    gpio_set_dir(I2C0_POWER_PIN, true);
-#endif
+    // gpio_set_function(I2C1_SDA_ALT_PIN, GPIO_FUNC_I2C);
+    // gpio_set_function(I2C1_SLK_ALT_PIN, GPIO_FUNC_I2C);
 
     lgOpen(uart0, LOG_LEVEL_OFF);
 
@@ -148,11 +144,13 @@ int main(void) {
             true,
             NULL);
 
+#ifdef ENABLE_BATTERY_MONITOR
     scheduleTask(
             TASK_BATTERY_MONITOR,
             rtc_val_min(5),
             false,
             NULL);
+#endif
 
     setTaskAttributes(TASK_BATTERY_MONITOR, true);
 

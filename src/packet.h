@@ -26,17 +26,14 @@
 ** 8 - 10       LC709203 BP T|G|C
 ** 11 - 15      Reserved
 */
-#define STATUS_BITS_TMP117_I2C_ERROR                0x0001
-#define STATUS_BITS_SHT4X_I2C_ERROR                 0x0002
-#define STATUS_BITS_ICP10125_I2C_ERROR              0x0004
-#define STATUS_BITS_LTR390_ALS_I2C_ERROR            0x0008
-#define STATUS_BITS_LTR390_UVI_I2C_ERROR            0x0010
-#define STATUS_BITS_LC709203_BV_I2C_CRC_ERROR       0x0020
-#define STATUS_BITS_LC709203_BV_I2C_GEN_ERROR       0x0040
-#define STATUS_BITS_LC709203_BV_I2C_TIMEOUT_ERROR   0x0080
-#define STATUS_BITS_LC709203_BP_I2C_CRC_ERROR       0x0100
-#define STATUS_BITS_LC709203_BP_I2C_GEN_ERROR       0x0200
-#define STATUS_BITS_LC709203_BP_I2C_TIMEOUT_ERROR   0x0400
+#define STATUS_BITS_TMP117_I2C_ERROR                0x01
+#define STATUS_BITS_SHT4X_I2C_ERROR                 0x02
+#define STATUS_BITS_ICP10125_I2C_ERROR              0x04
+#define STATUS_BITS_LTR390_ALS_I2C_ERROR            0x08
+#define STATUS_BITS_LTR390_UVI_I2C_ERROR            0x10
+#define STATUS_BITS_MAX17048_BV_I2C_ERROR           0x20
+#define STATUS_BITS_MAX17048_BP_I2C_ERROR           0x40
+#define STATUS_BITS_MAX17048_BCR_I2C_ERROR          0x80
 
 #pragma pack(push, 1)
 typedef struct {                                    // O/S  - Description
@@ -45,16 +42,18 @@ typedef struct {                                    // O/S  - Description
 
     uint8_t             packetNum[3];               // 0x01 - Packet number (24-bit)
 
-    uint16_t            status;                     // 0x04 - Status bits
+    uint8_t             status;                     // 0x04 - Status bits
 
-    uint16_t            rawWindDir;                 // 0x06 - Raw ADC wind direction
+    uint8_t             rawBatteryPercentage;       // 0x05 - Raw I2C value for battery %
+    int16_t             rawBatteryChargeRate;       // 0x06 - Raw I2C battery charge rate
+    uint16_t            rawBatteryVolts;            // 0x08 - Raw I2C value for battery V
 
-    int16_t             rawTemperature;             // 0x08 - Raw I2C TMP117 value
-    uint32_t            rawICPPressure;             // 0x0A - Raw pressure from icp10125
-    uint16_t            rawHumidity;                // 0x0E - Raw I2C SHT4x value
-    uint8_t             rawALS_UV[6];               // 0x10 - Raw I2C LTR390 ALS & UV value
-    uint16_t            rawBatteryVolts;            // 0x16 - Raw I2C value for battery V
-    uint16_t            rawBatteryPercentage;       // 0x18 - Raw I2C value for battery %
+    uint16_t            rawWindDir;                 // 0x0A - Raw ADC wind direction
+
+    int16_t             rawTemperature;             // 0x0C - Raw I2C TMP117 value
+    uint32_t            rawICPPressure;             // 0x0E - Raw pressure from icp10125
+    uint16_t            rawHumidity;                // 0x12 - Raw I2C SHT4x value
+    uint8_t             rawALS_UV[6];               // 0x14 - Raw I2C LTR390 ALS & UV value
 
     uint16_t            rawRainfall;                // 0x1A - Raw rain sensor count
     uint16_t            rawWindspeed;               // 0x1C - Raw wind speed

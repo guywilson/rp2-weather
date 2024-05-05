@@ -7,5 +7,6 @@
 #define TMP117_ADDRESS                      0x48
 #define VEML7700_ADDRESS                    0x10
 #define LTR390_ADDRESS                      0x53
+#define MAX17048_ADDRESS                    0x36
 
 #endif
