@@ -29,6 +29,11 @@
 #define STATE_RADIO_FINISH                  0x0300
 #define STATE_SLEEP                         0xFF00
 
+#define SLEEP_PERIOD_OFF                    0
+#define SLEEP_PERIOD_15H                   15
+#define SLEEP_PERIOD_24H                   24
+#define SLEEP_PERIOD_72H                   72
+
 static datetime_t           dt;
 static datetime_t           alarm_dt;
 
@@ -40,9 +45,9 @@ void wakeUp(void) {
 }
 
 void taskBatteryMonitor(PTASKPARM p) {
-    static bool                 doSleep = false;
     static int                  state = STATE_RADIO_POWER_UP;
     static int                  runCount = 0;
+    static int                  sleepPeriod = SLEEP_PERIOD_OFF;
     static uint16_t             lastBatteryPct = 0;
     uint8_t                     buffer[32];
     rtc_t                       delay = rtc_val_sec(10);
@@ -59,13 +64,28 @@ void taskBatteryMonitor(PTASKPARM p) {
     */
     if (runCount > 6) {
         if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_CRITICAL && lastBatteryPct < BATTERY_PERCENTAGE_CRITICAL) {
-            doSleep = true;
+            sleepPeriod = SLEEP_PERIOD_72H;
+        }
+        else if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_VLOW && lastBatteryPct < BATTERY_PERCENTAGE_VLOW) {
+            /*
+            ** Sleep for 24 hours to preserve the battery overnight
+            */
+            sleepPeriod = SLEEP_PERIOD_24H;
+        }
+        else if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_LOW && lastBatteryPct < BATTERY_PERCENTAGE_LOW) {
+            /*
+            ** Sleep for 15 hours to preserve the battery overnight
+            */
+            sleepPeriod = SLEEP_PERIOD_15H;
+        }
+        else {
+            sleepPeriod = SLEEP_PERIOD_OFF;
         }
     }
 
     lastBatteryPct = pWeather->rawBatteryPercentage;
     
-    if (doSleep) {
+    if (sleepPeriod != SLEEP_PERIOD_OFF) {
         /*
         ** Steps we need to take:
         **
@@ -74,7 +94,7 @@ void taskBatteryMonitor(PTASKPARM p) {
         ** 3. Stop the scheduler (by stopping the scheduler tick timer)
         ** 4. Disable the ADC, I2c, SPI & PIO
         ** 5. Turn off all GPIO pins (including onboard LED)
-        ** 6. Setup the RTC and set a timer for 72 hours
+        ** 6. Setup the RTC and set a timer for the sleep period
         ** 7. Go to sleep zzzzzzzz
         */
         switch (state) {
@@ -132,9 +152,9 @@ void taskBatteryMonitor(PTASKPARM p) {
                 gpio_clr_mask(0x3FFFFFFF);
 
                 /*
-                ** Set the date as midnight 1st Jan 2023...
+                ** Set the date as midnight 1st Jan 2020...
                 */
-                dt.year = 2023;
+                dt.year = 2020;
                 dt.month = 1;
                 dt.day = 1;
                 dt.dotw = 0;
@@ -143,15 +163,26 @@ void taskBatteryMonitor(PTASKPARM p) {
                 dt.sec = 0;
 
                 /*
-                ** Set an alarm 72 hours later...
+                ** Set an alarm...
                 */
                 alarm_dt.year = -1;
                 alarm_dt.month = -1;
-                alarm_dt.day = 4;
                 alarm_dt.dotw = -1;
-                alarm_dt.hour = -1;
                 alarm_dt.min = -1;
                 alarm_dt.sec = -1;
+
+                if (sleepPeriod == SLEEP_PERIOD_72H) {
+                    alarm_dt.day = 4;
+                    alarm_dt.hour = -1;
+                }
+                else if (sleepPeriod == SLEEP_PERIOD_24H) {
+                    alarm_dt.day = 2;
+                    alarm_dt.hour = -1;
+                }
+                else if (sleepPeriod == SLEEP_PERIOD_15H) {
+                    alarm_dt.day = -1;
+                    alarm_dt.hour = 15;
+                }
 
                 rtc_init();
                 rtc_set_datetime(&dt);

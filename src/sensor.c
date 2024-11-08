@@ -232,55 +232,6 @@ void taskI2CSensor(PTASKPARM p) {
             delay = rtc_val_ms(920);
             break;
 
-        // case STATE_READ_ALS:
-        //     lgLogDebug("Rd ALS");
-
-        //     bytesRead = i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_ALS_DATA0, buffer, 3);
-
-        //     memset(&pWeather->rawALS_UV[0], 0, 6);
-
-        //     if (bytesRead > 0) {
-        //         lgLogDebug("Rx: %02X %02X %02X", buffer[0], buffer[1], buffer[2]);
-        //         memcpy(&pWeather->rawALS_UV[0], buffer, 3);
-
-        //         memcpy(&lastPacket.rawALS_UV[0], &pWeather->rawALS_UV[0], 3);
-        //     }
-        //     else {
-        //         lgLogError("ALS Error");
-        //         memcpy(&pWeather->rawALS_UV[0], &lastPacket.rawALS_UV[0], 3);
-        //         pWeather->status |= STATUS_BITS_LTR390_ALS_I2C_ERROR;
-        //     }
-
-        //     input[0] = LTR390_CTRL_SENSOR_ENABLE | LTR390_CTRL_UVS_MODE_UVS;
-        //     i2cWriteRegister(i2c0, LTR390_ADDRESS, LTR390_REG_CTRL, input, 1);
-
-        //     delay = rtc_val_ms(1000);
-        //     state = STATE_READ_UVS;
-        //     break;
-
-        // case STATE_READ_UVS:
-        //     lgLogDebug("Rd UVS");
-
-        //     bytesRead = i2cReadRegister(i2c0, LTR390_ADDRESS, LTR390_REG_UVS_DATA0, buffer, 3);
-
-        //     if (bytesRead > 0) {
-        //         lgLogDebug("Rx: %02X %02X %02X", buffer[0], buffer[1], buffer[2]);
-        //         memcpy(&pWeather->rawALS_UV[3], buffer, 3);
-
-        //         memcpy(&lastPacket.rawALS_UV[3], &pWeather->rawALS_UV[3], 3);
-        //     }
-        //     else {
-        //         memcpy(&pWeather->rawALS_UV[3], &lastPacket.rawALS_UV[3], 3);
-        //         pWeather->status |= STATUS_BITS_LTR390_UVI_I2C_ERROR;
-        //     }
-
-        //     input[0] = LTR390_CTRL_SENSOR_ENABLE | LTR390_CTRL_UVS_MODE_ALS;
-        //     i2cWriteRegister(i2c0, LTR390_ADDRESS, LTR390_REG_CTRL, input, 1);
-
-        //     delay = rtc_val_ms(1000);
-        //     state = STATE_READ_BATTERY_VOLTS;
-        //     break;
-
         case STATE_READ_BATTERY_VOLTS:
             lgLogDebug("Rd BV");
 
@@ -344,7 +295,15 @@ void taskI2CSensor(PTASKPARM p) {
                 delay = rtc_val_sec(53);
             }
             else {
-                delay = rtc_val_sec(293);
+                if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_MEDIUM) {
+                    delay = rtc_val_hr(1);
+                }
+                else if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_OK) {
+                    delay = rtc_val_min(20);
+                }
+                else {
+                    delay = rtc_val_sec(293);
+                }
             }
 
             state = STATE_SEND_BEGIN;

@@ -31,7 +31,7 @@
 #include "utils.h"
 #include "gpio_def.h"
 
-//#define ENABLE_BATTERY_MONITOR
+#define ENABLE_BATTERY_MONITOR
 
 void taskDebugCheck(PTASKPARM p) {
     if (isDebugActive()) {
