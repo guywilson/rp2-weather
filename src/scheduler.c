@@ -22,20 +22,19 @@
 #include <unistd.h>
 #endif
 
-#ifdef PICO_MULTICORE
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "hardware/irq.h"
 #include "hardware/uart.h"
 #include "hardware/gpio.h"
+#include "hardware/clocks.h"
+#include "hardware/regs/m0plus.h"
 #include "hardware/structs/sio.h"
-#endif
+#include "hardware/structs/scb.h"
 
 #include "scheduler.h"
 #include "schederr.h"
 #include "gpio_def.h"
-
-#define TRACK_CPU_PCT
 
 #ifndef UNIT_TEST_MODE
 /******************************************************************************
@@ -58,11 +57,6 @@ typedef struct
 
 	void (* run)(PTASKPARM);			// Pointer to the task function to run
 										// Must be of the form void task(uint8_t core, PTASKPARM p);
-
-#ifdef PICO_MULTICORE
-    bool            forceCore0;         // Always run this task on core0 if true
-#endif
-
 	void * 			next;
 	void *			prev;
 }
@@ -112,29 +106,12 @@ static uint32_t				_tasksRunCount = 0;		// The total number of tasks run by the 
 static volatile rtc_t 	    _realTimeClock = 0;		// The real time clock counter
 static volatile uint16_t	_tickCount = 0;			// Num ticks between rtc counts
 
-static volatile uint32_t	_busyCount = 0;
-static volatile uint32_t	_idleCount = 0;
-
 // The RTC tick task...
 void 						(* _tickTask)() = &_nullTickTask;
 
-#ifdef PICO_MULTICORE
-#define CORE1_TASKDESC_POOL_SIZE                5
-volatile bool				isCoreOneBusy = false;
-PTASKDESC                   core1TaskDescPool;
-#else
-#define CORE1_TASKDESC_POOL_SIZE                0
-#endif
-
 #define getRTCClockCount()	(_realTimeClock)
 
-#ifdef TRACK_CPU_PCT
-#define signalBusy()		_busyCount++
-#define signalIdle()		_idleCount++
-#else
-#define signalBusy()		// Do nothing
-#define signalIdle()		// Do nothing
-#endif
+extern void _sleepPowerDown();
 
 /******************************************************************************
 **
@@ -199,28 +176,6 @@ static rtc_t _getScheduledTime(rtc_t startTime, rtc_t requestedDelay)
 }
 #else
 #define _getScheduledTime(startTime, requestedDelay)	(startTime + requestedDelay)
-#endif
-
-#ifdef PICO_MULTICORE
-void _core1_main(void)
-{
-	PTASKDESC			td = NULL;
-	uint32_t			data = 0;
-
-	while (1) {
-        data = multicore_fifo_pop_blocking();
-    
-        td = (PTASKDESC)(data);
-
-        /*
-        ** Run the task here (on core 1)...
-        */
-        isCoreOneBusy = true;
-        td->run(td->pParameter);
-        td->isAllocated = 0;
-        isCoreOneBusy = false;
-	}
-}
 #endif
 
 /******************************************************************************
@@ -292,31 +247,6 @@ rtc_t getRTCClock(void) {
 
 /******************************************************************************
 **
-** Name: getCPURatio()
-**
-** Description: Returns the busy & idle counts.
-**
-** Parameters:	uint32_t *		idleCount	A pointer to a 32-bit unsigned int
-**				uint32_t *		busyCount	A pointer to a 32-bit unsigned int
-**
-** Returns:		void 
-**
-******************************************************************************/
-void getCPURatio(PCPU_RATIO cpuRatio)
-{
-	/*
-	** busy/idle ratio = busyCount / (idleCount - busyCount)
-	*/
-	cpuRatio->idleCount = _idleCount - _busyCount;
-	cpuRatio->busyCount = _busyCount;
-
-	// Reset counters...
-	_busyCount = 0;
-	_idleCount = 0;
-}
-
-/******************************************************************************
-**
 ** Name: getTaskRunCount()
 **
 ** Description: Gets the total number of tasks run by the scheduler, useful
@@ -327,8 +257,7 @@ void getCPURatio(PCPU_RATIO cpuRatio)
 ** Returns:		uint32_t		The number of tasks run 
 **
 ******************************************************************************/
-uint32_t getTaskRunCount()
-{
+uint32_t getTaskRunCount() {
 	return _tasksRunCount;
 }
 
@@ -344,8 +273,7 @@ uint32_t getTaskRunCount()
 ** Returns:		void 
 **
 ******************************************************************************/
-void initScheduler(int size)
-{
+void initScheduler(int size) {
 	int			i = 0;
 	PTASKDESC	td = NULL;
 
@@ -366,7 +294,7 @@ printf("Allocated %d tasks\n", taskArrayLength);
 	/*
 	** Allocate memory for task array...
 	*/
-	taskDescs = (PTASKDESC)malloc((taskArrayLength + CORE1_TASKDESC_POOL_SIZE) * sizeof(TASKDESC));
+	taskDescs = (PTASKDESC)malloc((taskArrayLength) * sizeof(TASKDESC));
 
 	if (taskDescs == NULL) {
 		handleError(ERROR_SCHED_TASKCOUNTOVERFLOW);
@@ -374,7 +302,7 @@ printf("Allocated %d tasks\n", taskArrayLength);
 
 	taskCount = 0;
 	
-	for (i = 0;i < (taskArrayLength + CORE1_TASKDESC_POOL_SIZE);i++) {
+	for (i = 0;i < (taskArrayLength);i++) {
 		td = &taskDescs[i];
 		
 		td->ID				= 0;
@@ -387,26 +315,9 @@ printf("Allocated %d tasks\n", taskArrayLength);
 		td->pParameter		= NULL;
 		td->run				= &_nullTask;
 
-        td->forceCore0      = false;
-
 		td->next			= NULL;
 		td->prev			= NULL;
 	}
-
-#ifdef PICO_MULTICORE
-    core1TaskDescPool = &taskDescs[taskArrayLength];
-
-	/*
-	** Initialise the 2nd core...
-	*/
-	multicore_reset_core1();
-	multicore_fifo_drain();
-
-	/*
-	** Launch the main loop on the 2nd core...
-	*/
-	multicore_launch_core1(_core1_main);
-#endif
 }
 
 /******************************************************************************
@@ -421,8 +332,7 @@ printf("Allocated %d tasks\n", taskArrayLength);
 ** Returns:		void 
 **
 ******************************************************************************/
-void registerTickTask(void (* tickTask)())
-{
+void registerTickTask(void (* tickTask)()) {
 	_tickTask = tickTask;
 }
 
@@ -438,8 +348,7 @@ void registerTickTask(void (* tickTask)())
 ** Returns:		void 
 **
 ******************************************************************************/
-void registerTask(uint16_t taskID, void (* run)(PTASKPARM))
-{
+void registerTask(uint16_t taskID, void (* run)(PTASKPARM)) {
 	int			i;
 	PTASKDESC	td = NULL;
 	uint8_t		noFreeTasks = 1;
@@ -500,8 +409,7 @@ void registerTask(uint16_t taskID, void (* run)(PTASKPARM))
 ** Returns:		void 
 **
 ******************************************************************************/
-void deregisterTask(uint16_t taskID)
-{
+void deregisterTask(uint16_t taskID) {
 	PTASKDESC	td = NULL;
 
 	td = _findTaskByID(taskID);
@@ -546,8 +454,7 @@ void deregisterTask(uint16_t taskID)
 ** Returns:		void 
 **
 ******************************************************************************/
-void scheduleTask(uint16_t taskID, rtc_t time, bool isPeriodic, PTASKPARM p)
-{
+void scheduleTask(uint16_t taskID, rtc_t time, bool isPeriodic, PTASKPARM p) {
 	PTASKDESC	td = NULL;
 
 	td = _findTaskByID(taskID);
@@ -580,8 +487,7 @@ void scheduleTask(uint16_t taskID, rtc_t time, bool isPeriodic, PTASKPARM p)
 ** Returns:		void 
 **
 ******************************************************************************/
-void rescheduleTask(uint16_t taskID, PTASKPARM p)
-{
+void rescheduleTask(uint16_t taskID, PTASKPARM p) {
 	PTASKDESC	td = NULL;
 
 	td = _findTaskByID(taskID);
@@ -607,8 +513,7 @@ void rescheduleTask(uint16_t taskID, PTASKPARM p)
 ** Returns:		void 
 **
 ******************************************************************************/
-void unscheduleTask(uint16_t taskID)
-{
+void unscheduleTask(uint16_t taskID) {
 	PTASKDESC	td = NULL;
 
 	td = _findTaskByID(taskID);
@@ -621,32 +526,19 @@ void unscheduleTask(uint16_t taskID)
 	}
 }
 
-#ifdef PICO_MULTICORE
-/******************************************************************************
-**
-** Name: setTaskAttributes()
-**
-** Description: Un-schedules a task that has previously been scheduled, e.g. this
-** will cancel the scheduled run.
-**
-** Parameters:	
-** uint16_t		taskID		The unique ID for the task
-** bool         isCore0     Force the scheduler to run this task on core0
-**
-** Returns:		void 
-**
-******************************************************************************/
-void setTaskAttributes(uint16_t taskID, bool isCore0)
-{
-	PTASKDESC	td = NULL;
+inline static void deepSleep(void) {
+	_sleepPowerDown();
 
-	td = _findTaskByID(taskID);
+    clocks_hw->sleep_en0 = CLOCKS_SLEEP_EN0_CLK_RTC_RTC_BITS;
+    clocks_hw->sleep_en1 = 0x0;
 
-	if (td != NULL) {
-		td->forceCore0 = isCore0;
-	}
+    uint save = scb_hw->scr;
+    
+    // Enable deep sleep at the proc
+    scb_hw->scr = save | M0PLUS_SCR_SLEEPDEEP_BITS;
+
+    __wfi();
 }
-#endif
 
 /******************************************************************************
 **
@@ -662,7 +554,6 @@ void setTaskAttributes(uint16_t taskID, bool isCore0)
 ******************************************************************************/
 void schedule()
 {
-    int         taskPoolCount = 0;
 	PTASKDESC	td = head;
 	
 	/*
@@ -677,8 +568,6 @@ void schedule()
 	** scheduled...
 	*/
 	while (1) {
-		signalIdle();
-
 		if (td->isScheduled && getRTCClockCount() >= td->scheduledTime) {
 			/*
 			** Mark the task as un-scheduled, so by default the
@@ -691,35 +580,7 @@ void schedule()
 			/*
 			** Run the task...
 			*/
-			signalBusy();
-#ifdef PICO_MULTICORE
-            /*
-            ** If core1 is not busy, run the task on core 1 (the default). 
-            ** Otherwise run it on core 0 (this core) as a fallback. 
-            */
-            if (!isCoreOneBusy && !td->forceCore0) {
-                for (taskPoolCount = 0;taskPoolCount < CORE1_TASKDESC_POOL_SIZE;taskPoolCount++) {
-                    if (!core1TaskDescPool[taskPoolCount].isAllocated) {
-                        memcpy(&core1TaskDescPool[taskPoolCount], td, sizeof(TASKDESC));
-                        if (multicore_fifo_push_timeout_us((uint32_t)&core1TaskDescPool[taskPoolCount], 25)) {
-                            break;
-                        }
-                    }
-                }
-                /*
-                ** if there are no free task descriptors in our pool
-                ** Run the task on core 0...
-                */
-                if (taskPoolCount == CORE1_TASKDESC_POOL_SIZE) {
-                    td->run(td->pParameter);
-                }
-            }
-            else {
-                td->run(td->pParameter);
-            }
-#else
             td->run(td->pParameter);
-#endif
 
 			if (td->isPeriodic && !td->isScheduled) {
 				rescheduleTask(td->ID, td->pParameter);
@@ -738,7 +599,7 @@ void schedule()
 			** If we've looped through all the registered tasks, sleep
 			** until the next interrupt to save power...
 			*/
-			__wfi();
+			deepSleep();
 		}
 	}
 }

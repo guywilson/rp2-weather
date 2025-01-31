@@ -11,7 +11,6 @@
 #include "hardware/spi.h"
 #include "hardware/watchdog.h"
 #include "hardware/gpio.h"
-#include "adc_rp2040.h"
 #include "rtc_rp2040.h"
 #include "i2c_rp2040.h"
 #include "pio_rp2040.h"
@@ -109,8 +108,6 @@ void taskBatteryMonitor(PTASKPARM p) {
                 pSleep->rawBatteryVolts = pWeather->rawBatteryVolts;
                 pSleep->sleepHours = 72;
 
-                memcpy(&pSleep->rawALS_UV, pWeather->rawALS_UV, 5);
-
                 memcpy(buffer, pSleep, sizeof(sleep_packet_t));
                 nRF24L01_transmit_buffer(spi0, buffer, sizeof(sleep_packet_t), false);
                 
@@ -130,8 +127,6 @@ void taskBatteryMonitor(PTASKPARM p) {
                 disableRTC();
                 
                 multicore_reset_core1();
-                
-                adc_hw->cs = 0x00000000;
                 
                 i2c0->hw->enable = 0;
                 i2c1->hw->enable = 0;

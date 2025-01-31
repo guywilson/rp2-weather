@@ -4,10 +4,10 @@
 #define _INCL_RTC_RP2040
 
 /*
- * Set the RTC clock frequency to 100Hz (10ms tick)...
+ * Set the RTC clock frequency to 10Hz (100ms tick)...
  */
-#define RTC_CLOCK_FREQ					100
-#define RTC_DEFAULT_INTERRUPT_CYCLE     10000U
+#define RTC_CLOCK_FREQ					10
+#define RTC_DEFAULT_INTERRUPT_CYCLE     100000U
 
 void		setupRTC(void);
 void        disableRTC(void);
@@ -18,7 +18,7 @@ void        setRTCFrequency(double frequency);
 
 /*
 ** Convenience macros for scheduler time periods.
-** The resolution of the scheduler is 100us...
+** The resolution of the scheduler is 100ms...
 */
 #define rtc_val_ms(time_in_ms)				(rtc_t)((double)(time_in_ms) * (getRTCFrequency() / (double)1000))
 

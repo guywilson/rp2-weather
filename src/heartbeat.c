@@ -7,8 +7,8 @@
 #include "taskdef.h"
 #include "gpio_def.h"
 
-#define HEARTBEAT_ON_TIME                20
-#define HEARBEAT_OFF_TIME               980
+#define HEARTBEAT_ON_TIME               100
+#define HEARBEAT_OFF_TIME               900
 
 void HeartbeatTask(PTASKPARM p) {
     static uint8_t on = 0;

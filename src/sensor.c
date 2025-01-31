@@ -18,8 +18,6 @@
 #include "TMP117.h"
 #include "SHT4x.h"
 #include "icp10125.h"
-#include "ltr390.h"
-#include "lc709203.h"
 #include "max17048.h"
 #include "nRF24L01.h"
 #include "gpio_def.h"
@@ -60,6 +58,75 @@ int nullSetup(i2c_inst_t * i2c) {
     return 0;
 }
 
+static void initGPOIs(void) {
+    /*
+    ** I2C bus pins...
+    */
+    gpio_set_function(I2C0_SDA_ALT_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(I2C0_SLK_ALT_PIN, GPIO_FUNC_I2C);
+
+    /*
+    ** SPI CSn
+    */
+    gpio_init(NRF24L01_SPI_PIN_CSN);
+    gpio_set_dir(NRF24L01_SPI_PIN_CSN, true);
+    gpio_put(NRF24L01_SPI_PIN_CSN, true);
+
+    /*
+    ** SPI CE
+    */
+    gpio_init(NRF24L01_SPI_PIN_CE);
+    gpio_set_dir(NRF24L01_SPI_PIN_CE, true);
+    gpio_put(NRF24L01_SPI_PIN_CE, false);
+
+    gpio_set_function(NRF24L01_SPI_PIN_MOSI, GPIO_FUNC_SPI);	// SPI TX
+    gpio_set_function(NRF24L01_SPI_PIN_MISO, GPIO_FUNC_SPI);	// SPI RX
+    gpio_set_function(NRF24L01_SPI_PIN_SCK, GPIO_FUNC_SPI);	    // SPI SCK
+
+    uint pinMask = 
+            (1 << I2C0_POWER_PIN_0) | 
+            (1 << I2C0_POWER_PIN_1);
+
+    gpio_init_mask(pinMask);
+    gpio_set_dir_out_masked(pinMask);
+
+    gpio_set_drive_strength(I2C0_POWER_PIN_0, GPIO_DRIVE_STRENGTH_12MA);
+    gpio_set_drive_strength(I2C0_POWER_PIN_1, GPIO_DRIVE_STRENGTH_12MA);
+
+    gpio_set_mask(pinMask);
+}
+
+static void deInitGPOIs(void) {
+    /*
+    ** Claim GPIOs as outputs and drive them all low...
+    */
+    uint pinMask = 
+            (1 << I2C0_SDA_ALT_PIN) | 
+            (1 << I2C0_SLK_ALT_PIN) | 
+            (1 << NRF24L01_SPI_PIN_CE) | 
+            (1 << NRF24L01_SPI_PIN_CSN) | 
+            (1 << NRF24L01_SPI_PIN_MISO) | 
+            (1 << NRF24L01_SPI_PIN_MOSI) | 
+            (1 << NRF24L01_SPI_PIN_SCK) |
+            (1 << I2C0_POWER_PIN_0) | 
+            (1 << I2C0_POWER_PIN_1);
+
+    gpio_init_mask(pinMask);
+    gpio_set_dir_out_masked(pinMask);
+
+    gpio_disable_pulls(I2C0_SDA_ALT_PIN);    
+    gpio_disable_pulls(I2C0_SLK_ALT_PIN);    
+    gpio_disable_pulls(NRF24L01_SPI_PIN_CE);    
+    gpio_disable_pulls(NRF24L01_SPI_PIN_CSN);    
+    gpio_disable_pulls(NRF24L01_SPI_PIN_MISO);    
+    gpio_disable_pulls(NRF24L01_SPI_PIN_MOSI);    
+    gpio_disable_pulls(NRF24L01_SPI_PIN_SCK);    
+    gpio_disable_pulls(I2C0_POWER_PIN_0);    
+    gpio_disable_pulls(I2C0_POWER_PIN_1);    
+
+    gpio_clr_mask(pinMask);
+}
+
 static void setPacketNumber(weather_packet_t * p) {
     static uint32_t             packetNum = 0;
 
@@ -81,14 +148,12 @@ static int registerSensorsI2C0(void) {
     i2c_bus_register_device(i2c0, SHT4X_ADDRESS, &sht4x_setup);
     i2c_bus_register_device(i2c0, ICP10125_ADDRESS, &icp10125_setup);
     i2c_bus_register_device(i2c0, MAX17048_ADDRESS, &max17048_setup);
-//    i2c_bus_register_device(i2c0, LTR390_ADDRESS, &ltr390_setup);
 
     return rtn;
 }
 
 void taskI2CSensor(PTASKPARM p) {
     static int                  state = STATE_START;
-    static int                  crcFailCount = 0;
     static weather_packet_t     lastPacket;
     int                         i;
     int                         count = 0;
@@ -99,7 +164,7 @@ void taskI2CSensor(PTASKPARM p) {
     uint8_t                     input[2];
     rtc_t                       delay;
 
-    weather_packet_t *          pWeather = getWeatherPacket();
+    weather_packet_t * pWeather = getWeatherPacket();
 
     switch (state) {
         case STATE_START:
@@ -114,16 +179,13 @@ void taskI2CSensor(PTASKPARM p) {
             */
 
         case STATE_I2C_INIT:
-            lgLogDebug("I2C Init");
+            initGPOIs();
 
-            /*
-            ** Deliberately fall through...
-            */
-
-        case STATE_I2C_INIT2:
             lgLogDebug("I2C Init2");
 
             i2c_init(i2c0, 400000);
+            spi_init(spi0, 5000000);
+            nRF24L01_setup(spi0);
 
             delay = rtc_val_sec(1);
             state = STATE_SETUP_I2C0;
@@ -135,7 +197,7 @@ void taskI2CSensor(PTASKPARM p) {
             i2c_bus_setup(i2c0);
 
             state = STATE_READ_TEMP;
-            delay = rtc_val_sec(50);
+            delay = rtc_val_ms(200);
             break;
 
         case STATE_READ_TEMP:
@@ -153,7 +215,7 @@ void taskI2CSensor(PTASKPARM p) {
             }
 
             state = STATE_READ_HUMIDITY_1;
-            delay = rtc_val_ms(1000);
+            delay = rtc_val_ms(500);
             break;
 
         case STATE_READ_HUMIDITY_1:
@@ -164,7 +226,7 @@ void taskI2CSensor(PTASKPARM p) {
             i2cWriteTimeoutProtected(i2c0, SHT4X_ADDRESS, input, 1, true);
 
             state = STATE_READ_HUMIDITY_2;
-            delay = rtc_val_ms(20);
+            delay = rtc_val_ms(100);
             break;
 
         case STATE_READ_HUMIDITY_2:
@@ -182,7 +244,7 @@ void taskI2CSensor(PTASKPARM p) {
             }
 
             state = STATE_READ_PRESSURE_1;
-            delay = rtc_val_ms(980);
+            delay = rtc_val_ms(400);
             break;
 
         case STATE_READ_PRESSURE_1:
@@ -191,7 +253,7 @@ void taskI2CSensor(PTASKPARM p) {
             icp10125_read_otp(i2c0);
 
             state = STATE_READ_PRESSURE_2;
-            delay = rtc_val_ms(50);
+            delay = rtc_val_ms(100);
             break;
 
         case STATE_READ_PRESSURE_2:
@@ -203,7 +265,7 @@ void taskI2CSensor(PTASKPARM p) {
             i2cWriteTimeoutProtected(i2c0, ICP10125_ADDRESS, input, 2, false);
 
             state = STATE_READ_PRESSURE_3;
-            delay = rtc_val_ms(30);
+            delay = rtc_val_ms(100);
             break;
 
         case STATE_READ_PRESSURE_3:
@@ -229,7 +291,7 @@ void taskI2CSensor(PTASKPARM p) {
             }
 
             state = STATE_READ_BATTERY_VOLTS;
-            delay = rtc_val_ms(920);
+            delay = rtc_val_ms(300);
             break;
 
         case STATE_READ_BATTERY_VOLTS:
@@ -249,7 +311,7 @@ void taskI2CSensor(PTASKPARM p) {
                 pWeather->status |= STATUS_BITS_MAX17048_BV_I2C_ERROR;
             }
 
-            delay = rtc_val_ms(1000);
+            delay = rtc_val_ms(500);
             state = STATE_READ_BATTERY_PERCENT;
             break;
 
@@ -270,7 +332,7 @@ void taskI2CSensor(PTASKPARM p) {
                 pWeather->status |= STATUS_BITS_MAX17048_BP_I2C_ERROR;
             }
 
-            delay = rtc_val_ms(1000);
+            delay = rtc_val_ms(500);
             state = STATE_READ_BATTERY_CRATE;
             break;
 
@@ -291,21 +353,7 @@ void taskI2CSensor(PTASKPARM p) {
                 pWeather->status |= STATUS_BITS_MAX17048_BCR_I2C_ERROR;
             }
 
-            if (isDebugActive()) {
-                delay = rtc_val_sec(53);
-            }
-            else {
-                if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_MEDIUM) {
-                    delay = rtc_val_hr(1);
-                }
-                else if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_OK) {
-                    delay = rtc_val_min(20);
-                }
-                else {
-                    delay = rtc_val_sec(293);
-                }
-            }
-
+            delay = rtc_val_ms(200);
             state = STATE_SEND_BEGIN;
             break;
 
@@ -314,7 +362,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             setPacketNumber(pWeather);
 
-            delay = rtc_val_ms(150);
+            delay = rtc_val_ms(200);
             state = STATE_SEND_PACKET;
             break;
 
@@ -334,7 +382,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
 
-            delay = rtc_val_ms(130);
+            delay = rtc_val_ms(200);
             state = STATE_SEND_FINISH;
             break;
 
@@ -343,44 +391,26 @@ void taskI2CSensor(PTASKPARM p) {
 
             pWeather->status = 0x0000;
 
-            if (crcFailCount > 9) {
-                crcFailCount = 0;
+            i2c_deinit(i2c0);
+            spi_deinit(spi0);
+            deInitGPOIs();
 
-                /*
-                ** Attempt to recover...
-                */
-                state = STATE_CRC_FAILURE_1;
-                delay = rtc_val_ms(10);
-                break;
+            if (isDebugActive()) {
+                delay = rtc_val_sec(53);
+            }
+            else {
+                if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_MEDIUM) {
+                    delay = rtc_val_hr(1);
+                }
+                else if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_OK) {
+                    delay = rtc_val_min(20);
+                }
+                else {
+                    delay = rtc_val_sec(293);
+                }
             }
 
-            delay = rtc_val_ms(120);
-            state = STATE_READ_TEMP;
-            break;
-
-        case STATE_CRC_FAILURE_1:
-            lc709203_reset(i2c0);
-
-            delay = rtc_val_ms(100);
-            state = STATE_CRC_FAILURE_2;
-            break;
-
-        case STATE_CRC_FAILURE_2:
-            i2c_deinit(i2c0);
-
-            delay = rtc_val_ms(100);
-            state = STATE_CRC_FAILURE_3;
-            break;
-
-        case STATE_CRC_FAILURE_3:
-            /*
-            ** Don't update the watchdog timer, this will reset
-            ** the device in 100ms...
-            */
-            triggerWatchdogReset();
-
-            delay = rtc_val_sec(10);
-            state = STATE_CRC_FAILURE_3;
+            state = STATE_I2C_INIT;
             break;
     }
 

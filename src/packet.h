@@ -48,16 +48,15 @@ typedef struct {                                    // O/S  - Description
     int16_t             rawBatteryChargeRate;       // 0x06 - Raw I2C battery charge rate
     uint16_t            rawBatteryVolts;            // 0x08 - Raw I2C value for battery V
 
-    uint16_t            rawWindDir;                 // 0x0A - Raw ADC wind direction
+    int16_t             rawTemperature;             // 0x0A - Raw I2C TMP117 value
+    uint32_t            rawICPPressure;             // 0x0C - Raw pressure from icp10125
+    uint16_t            rawHumidity;                // 0x10 - Raw I2C SHT4x value
 
-    int16_t             rawTemperature;             // 0x0C - Raw I2C TMP117 value
-    uint32_t            rawICPPressure;             // 0x0E - Raw pressure from icp10125
-    uint16_t            rawHumidity;                // 0x12 - Raw I2C SHT4x value
-    uint8_t             rawALS_UV[6];               // 0x14 - Raw I2C LTR390 ALS & UV value
+    uint16_t            rawRainfall;                // 0x12 - Raw rain sensor count
+    uint16_t            rawWindspeed;               // 0x14 - Raw wind speed
+    uint16_t            rawWindGust;                // 0x16 - Raw wind gust speed
 
-    uint16_t            rawRainfall;                // 0x1A - Raw rain sensor count
-    uint16_t            rawWindspeed;               // 0x1C - Raw wind speed
-    uint16_t            rawWindGust;                // 0x1E - Raw wind gust speed
+    uint8_t             padding[8];                 // 0x18
 }
 weather_packet_t;
 
@@ -72,18 +71,15 @@ typedef struct {                                    // O/S  - Description
     uint16_t            sleepHours;                 // 0x04 - How many hours is the weather station sleeping for?
     uint16_t            rawBatteryVolts;            // 0x06 - The last raw I2C value for battery V
     uint16_t            rawBatteryPercentage;       // 0x08 - The last raw I2C value for batttery percentage
-    uint8_t             rawALS_UV[6];               // 0x0A - The last raw light level
 
-    uint8_t             padding[16];
+    uint8_t             padding[22];
 }
 sleep_packet_t;
 
 typedef struct {                                    // O/S  - Description
                                                     // ----   ---------------------------------
     uint8_t             packetID;                   // 0x00 - Identify this as a weather packet
-
     uint8_t             reserved;                   // 0x01 - Reserved
-
     uint16_t            status;                     // 0x02 - Status bits
 
     uint8_t             padding[28];

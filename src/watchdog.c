@@ -19,10 +19,6 @@
 
 static bool         doUpdate = true;
 
-void watchdog_disable(void) {
-	hw_clear_bits(&watchdog_hw->ctrl, WATCHDOG_CTRL_ENABLE_BITS);
-}
-
 void triggerWatchdogReset(void) {
     doUpdate = false;
 }
