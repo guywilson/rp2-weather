@@ -42,8 +42,7 @@ void toggleLED(int LED_ID) {
 }
 
 inline bool isDebugActive(void) {
-    return true;
-    // return (gpio_get(DEBUG_ENABLE_PIN) != 0 ? true : false);
+    return (gpio_get(DEBUG_ENABLE_PIN) != 0 ? true : false);
 }
 
 inline int16_t copyI2CReg_int16(uint8_t * reg) {

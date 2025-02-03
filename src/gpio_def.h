@@ -48,7 +48,6 @@
 #define DEBUG_PIN_RX                UART_RX_PIN         // GPIO 1
 
 #define I2C0_POWER_PIN_0            18
-#define I2C0_POWER_PIN_1            19
 
 #define DEBUG_ENABLE_PIN            12
 

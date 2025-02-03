@@ -83,17 +83,12 @@ static void initGPOIs(void) {
     gpio_set_function(NRF24L01_SPI_PIN_MISO, GPIO_FUNC_SPI);	// SPI RX
     gpio_set_function(NRF24L01_SPI_PIN_SCK, GPIO_FUNC_SPI);	    // SPI SCK
 
-    uint pinMask = 
-            (1 << I2C0_POWER_PIN_0) | 
-            (1 << I2C0_POWER_PIN_1);
+    gpio_init(I2C0_POWER_PIN_0);
+    gpio_set_dir(I2C0_POWER_PIN_0, GPIO_OUT);
 
-    gpio_init_mask(pinMask);
-    gpio_set_dir_out_masked(pinMask);
+    gpio_set_drive_strength(I2C0_POWER_PIN_0, GPIO_DRIVE_STRENGTH_4MA);
 
-    gpio_set_drive_strength(I2C0_POWER_PIN_0, GPIO_DRIVE_STRENGTH_12MA);
-    gpio_set_drive_strength(I2C0_POWER_PIN_1, GPIO_DRIVE_STRENGTH_12MA);
-
-    gpio_set_mask(pinMask);
+    gpio_put(I2C0_POWER_PIN_0, true);
 }
 
 static void deInitGPOIs(void) {
@@ -108,8 +103,7 @@ static void deInitGPOIs(void) {
             (1 << NRF24L01_SPI_PIN_MISO) | 
             (1 << NRF24L01_SPI_PIN_MOSI) | 
             (1 << NRF24L01_SPI_PIN_SCK) |
-            (1 << I2C0_POWER_PIN_0) | 
-            (1 << I2C0_POWER_PIN_1);
+            (1 << I2C0_POWER_PIN_0);
 
     gpio_init_mask(pinMask);
     gpio_set_dir_out_masked(pinMask);
@@ -122,7 +116,6 @@ static void deInitGPOIs(void) {
     gpio_disable_pulls(NRF24L01_SPI_PIN_MOSI);    
     gpio_disable_pulls(NRF24L01_SPI_PIN_SCK);    
     gpio_disable_pulls(I2C0_POWER_PIN_0);    
-    gpio_disable_pulls(I2C0_POWER_PIN_1);    
 
     gpio_clr_mask(pinMask);
 }
