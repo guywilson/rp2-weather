@@ -35,14 +35,14 @@
 #define I2C0_SDA_ALT_PIN			16
 #define I2C0_SLK_ALT_PIN			17
 
-#define PIO_PIN_ANEMOMETER          10
+#define PIO_PIN_ANEMOMETER          11
 #define PIO_PIN_RAIN_GAUGE          13
 
-#define NRF24L01_SPI_PIN_CE          6
-#define NRF24L01_SPI_PIN_CSN         5
-#define NRF24L01_SPI_PIN_MOSI        3
-#define NRF24L01_SPI_PIN_MISO        4
-#define NRF24L01_SPI_PIN_SCK         2
+#define NRF24L01_SPI_PIN_CE         10
+#define NRF24L01_SPI_PIN_CSN         9
+#define NRF24L01_SPI_PIN_MOSI        7
+#define NRF24L01_SPI_PIN_MISO        8
+#define NRF24L01_SPI_PIN_SCK         6
 
 #define DEBUG_PIN_TX                UART_TX_PIN         // GPIO 0
 #define DEBUG_PIN_RX                UART_RX_PIN         // GPIO 1

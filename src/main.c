@@ -61,7 +61,7 @@ static void setup(void) {
 	setupRTC();
 	setupSerial();
 
-    // lgOpen(uart0, LOG_LEVEL_OFF);
+    lgOpen(uart0, LOG_LEVEL_FATAL | LOG_LEVEL_ERROR | LOG_LEVEL_STATUS | LOG_LEVEL_DEBUG | LOG_LEVEL_INFO);
 
     pioInit();
 }
@@ -75,16 +75,16 @@ int main(void) {
         isWatchdogReboot = true;
 	}
 
-	initScheduler(8);
+	initScheduler(4);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
-	registerTask(TASK_WATCHDOG, &taskWatchdog);
-	registerTask(TASK_WATCHDOG_WAKEUP, &taskWatchdogWakeUp);
+	// registerTask(TASK_WATCHDOG, &taskWatchdog);
+	// registerTask(TASK_WATCHDOG_WAKEUP, &taskWatchdogWakeUp);
 	registerTask(TASK_I2C_SENSOR, &taskI2CSensor);
     registerTask(TASK_ANEMOMETER, &taskAnemometer);
     registerTask(TASK_RAIN_GAUGE, &taskRainGuage);
-    registerTask(TASK_BATTERY_MONITOR, &taskBatteryMonitor);
-    registerTask(TASK_DEBUG_CHECK, &taskDebugCheck);
+    // registerTask(TASK_BATTERY_MONITOR, &taskBatteryMonitor);
+    // registerTask(TASK_DEBUG_CHECK, &taskDebugCheck);
 
 	scheduleTask(
 			TASK_HEARTBEAT,
@@ -113,39 +113,39 @@ int main(void) {
             true,
             NULL);
 
-#ifdef ENABLE_BATTERY_MONITOR
-    scheduleTask(
-            TASK_BATTERY_MONITOR,
-            rtc_val_min(5),
-            false,
-            NULL);
-#endif
+// #ifdef ENABLE_BATTERY_MONITOR
+//     scheduleTask(
+//             TASK_BATTERY_MONITOR,
+//             rtc_val_min(5),
+//             false,
+//             NULL);
+// #endif
 
-	scheduleTask(
-			TASK_WATCHDOG, 
-			rtc_val_sec(2), 
-            true, 
-			NULL);
+// 	scheduleTask(
+// 			TASK_WATCHDOG, 
+// 			rtc_val_sec(2), 
+//             true, 
+// 			NULL);
 
-	scheduleTask(
-			TASK_DEBUG_CHECK, 
-			rtc_val_sec(1), 
-            true, 
-			NULL);
+// 	scheduleTask(
+// 			TASK_DEBUG_CHECK, 
+// 			rtc_val_sec(1), 
+//             true, 
+// 			NULL);
 
-    if (isWatchdogReboot) {
-        scheduleTask(
-            TASK_WATCHDOG_WAKEUP, 
-            rtc_val_sec(3), 
-            false, 
-            NULL);
-    }
+//     if (isWatchdogReboot) {
+//         scheduleTask(
+//             TASK_WATCHDOG_WAKEUP, 
+//             rtc_val_sec(3), 
+//             false, 
+//             NULL);
+//     }
 
 	/*
 	** Enable the watchdog, it will reset the device in 3s unless
 	** the watchdog timer is updated by WatchdogTask()...
 	*/
-	watchdog_enable(3000, false);
+	// watchdog_enable(3000, false);
 
 	/*
 	** Start the scheduler...

@@ -599,7 +599,8 @@ void schedule()
 			** If we've looped through all the registered tasks, sleep
 			** until the next interrupt to save power...
 			*/
-			deepSleep();
+			// deepSleep();
+			__wfi();
 		}
 	}
 }
