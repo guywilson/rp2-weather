@@ -54,7 +54,7 @@ static void setup(void) {
 	*/
 	watchdog_disable();
 
-    set_sys_clock_khz(40000, true);
+    set_sys_clock_khz(20000, true);
 
 	setupLEDPin();
     setupDebugPin();
