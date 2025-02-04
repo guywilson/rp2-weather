@@ -104,11 +104,20 @@ void taskBatteryMonitor(PTASKPARM p) {
         ** 5. Turn off all GPIO pins (including onboard LED)
         ** 6. Setup the RTC and set a timer for the sleep period
         ** 7. Go to sleep zzzzzzzz
+        **
+        ** This task is run as exclusive, all other tasks are unscheduled...
         */
         switch (state) {
             case STATE_START:
+                watchdog_disable();
+
+                /*
+                ** Power down the device in case we're mid send...
+                */
+                nRF24L01_powerDown(spi0);
+
                 state = STATE_RADIO_POWER_UP;
-                delay = rtc_val_sec(1);
+                delay = rtc_val_sec(5);
                 break;
 
             case STATE_RADIO_POWER_UP:
@@ -148,7 +157,6 @@ void taskBatteryMonitor(PTASKPARM p) {
             case STATE_SLEEP:
                 gpio_put(SCOPE_DEBUG_PIN_0, 0);
                 
-                watchdog_disable();
                 disableRTC();
 
                 i2c_deinit(i2c0);
