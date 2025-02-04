@@ -128,6 +128,7 @@ void		deregisterTask(uint16_t taskID);
 void        scheduleTask(uint16_t taskID, rtc_t time, bool isPeriodic, PTASKPARM p);
 void		rescheduleTask(uint16_t taskID, PTASKPARM p);
 void		unscheduleTask(uint16_t taskID);
+void 		scheduleTaskExlusive(uint16_t taskID, rtc_t time, bool isPeriodic, PTASKPARM p);
 
 void		schedule();
 

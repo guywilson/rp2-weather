@@ -10,6 +10,10 @@
 #include "hardware/i2c.h"
 #include "hardware/spi.h"
 #include "hardware/watchdog.h"
+#include "hardware/clocks.h"
+#include "hardware/regs/m0plus.h"
+#include "hardware/structs/sio.h"
+#include "hardware/structs/scb.h"
 #include "hardware/gpio.h"
 #include "rtc_rp2040.h"
 #include "i2c_rp2040.h"
@@ -23,15 +27,19 @@
 #include "battery.h"
 #include "gpio_def.h"
 
+#define STATE_START                         0x0001
 #define STATE_RADIO_POWER_UP                0x0100
 #define STATE_RADIO_SEND_PACKET             0x0200
 #define STATE_RADIO_FINISH                  0x0300
 #define STATE_SLEEP                         0xFF00
 
 #define SLEEP_PERIOD_OFF                    0
+#define SLEEP_PERIOD_1H                     1
 #define SLEEP_PERIOD_15H                   15
 #define SLEEP_PERIOD_24H                   24
 #define SLEEP_PERIOD_72H                   72
+
+#define DEBUG_SLEEP
 
 static datetime_t           dt;
 static datetime_t           alarm_dt;
@@ -44,10 +52,9 @@ void wakeUp(void) {
 }
 
 void taskBatteryMonitor(PTASKPARM p) {
-    static int                  state = STATE_RADIO_POWER_UP;
+    static int                  state = STATE_START;
     static int                  runCount = 0;
     static int                  sleepPeriod = SLEEP_PERIOD_OFF;
-    static uint16_t             lastBatteryPct = 0;
     uint8_t                     buffer[32];
     rtc_t                       delay = rtc_val_sec(10);
     sleep_packet_t *            pSleep;
@@ -57,6 +64,7 @@ void taskBatteryMonitor(PTASKPARM p) {
     pWeather = getWeatherPacket();
     pSleep = getSleepPacket();
 
+#ifndef DEBUG_SLEEP
     /* 
     ** If the battery percentage has dropped below critical,
     ** stop everything and put the RP2040 to sleep...
@@ -81,9 +89,10 @@ void taskBatteryMonitor(PTASKPARM p) {
             sleepPeriod = SLEEP_PERIOD_OFF;
         }
     }
+#else
+    sleepPeriod = SLEEP_PERIOD_1H;
+#endif
 
-    lastBatteryPct = pWeather->rawBatteryPercentage;
-    
     if (sleepPeriod != SLEEP_PERIOD_OFF) {
         /*
         ** Steps we need to take:
@@ -97,42 +106,54 @@ void taskBatteryMonitor(PTASKPARM p) {
         ** 7. Go to sleep zzzzzzzz
         */
         switch (state) {
+            case STATE_START:
+                state = STATE_RADIO_POWER_UP;
+                delay = rtc_val_sec(1);
+                break;
+
             case STATE_RADIO_POWER_UP:
+                gpio_init(SCOPE_DEBUG_PIN_0);
+                gpio_set_dir(SCOPE_DEBUG_PIN_0, true);
+
+                gpio_put(SCOPE_DEBUG_PIN_0, 1);
+
                 nRF24L01_powerUpTx(spi0);
 
                 state = STATE_RADIO_SEND_PACKET;
-                delay = rtc_val_ms(150);
+                delay = rtc_val_ms(200);
                 break;
 
             case STATE_RADIO_SEND_PACKET:
+                gpio_put(SCOPE_DEBUG_PIN_0, 0);
+                
                 pSleep->rawBatteryVolts = pWeather->rawBatteryVolts;
-                pSleep->sleepHours = 72;
+                pSleep->sleepHours = (uint16_t)sleepPeriod;
 
                 memcpy(buffer, pSleep, sizeof(sleep_packet_t));
                 nRF24L01_transmit_buffer(spi0, buffer, sizeof(sleep_packet_t), false);
                 
                 state = STATE_RADIO_FINISH;
-                delay = rtc_val_ms(125);
+                delay = rtc_val_ms(200);
                 break;
 
             case STATE_RADIO_FINISH:
+                gpio_put(SCOPE_DEBUG_PIN_0, 1);
+                
                 nRF24L01_powerDown(spi0);
 
                 state = STATE_SLEEP;
-                delay = rtc_val_ms(10);
+                delay = rtc_val_ms(100);
                 break;
 
             case STATE_SLEEP:
+                gpio_put(SCOPE_DEBUG_PIN_0, 0);
+                
                 watchdog_disable();
                 disableRTC();
-                
-                multicore_reset_core1();
-                
-                i2c0->hw->enable = 0;
-                i2c1->hw->enable = 0;
 
-                hw_clear_bits(&spi0_hw->cr1, SPI_SSPCR1_SSE_BITS);
-                hw_clear_bits(&spi1_hw->cr1, SPI_SSPCR1_SSE_BITS);
+                i2c_deinit(i2c0);
+                spi_deinit(spi0);
+                uart_deinit(uart0);
 
                 disablePIO();
 
@@ -178,10 +199,22 @@ void taskBatteryMonitor(PTASKPARM p) {
                     alarm_dt.day = -1;
                     alarm_dt.hour = 15;
                 }
+                else if (sleepPeriod == SLEEP_PERIOD_1H) {
+                    alarm_dt.day = -1;
+                    alarm_dt.hour = 1;
+                }
 
                 rtc_init();
                 rtc_set_datetime(&dt);
                 rtc_set_alarm(&alarm_dt, wakeUp);
+
+                clocks_hw->sleep_en0 = CLOCKS_SLEEP_EN0_CLK_RTC_RTC_BITS;
+                clocks_hw->sleep_en1 = 0x0;
+
+                uint save = scb_hw->scr;
+                
+                // Enable deep sleep at the proc
+                scb_hw->scr = save | M0PLUS_SCR_SLEEPDEEP_BITS;
 
                 /*
                 ** Now we can go to sleep zzzzzzzz
@@ -189,6 +222,9 @@ void taskBatteryMonitor(PTASKPARM p) {
                 __wfi();
                 break;
         }
+
+        scheduleTaskExlusive(TASK_BATTERY_MONITOR, delay, false, NULL);
+        return;
     }
 
     scheduleTask(TASK_BATTERY_MONITOR, delay, false, NULL);

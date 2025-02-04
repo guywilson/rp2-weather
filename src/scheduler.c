@@ -448,7 +448,6 @@ void deregisterTask(uint16_t taskID) {
 ** Parameters:	
 ** uint16_t		taskID		The unique ID for the task
 ** rtc_t		time		Number of ms in the future for the task to run
-** uint8_t		priority	The priority of the task
 ** PTASKPARM	p			Pointer to the task parameters, can be NULL
 **
 ** Returns:		void 
@@ -526,18 +525,45 @@ void unscheduleTask(uint16_t taskID) {
 	}
 }
 
-inline static void deepSleep(void) {
-	_sleepPowerDown();
+/******************************************************************************
+**
+** Name: scheduleTaskExclusive()
+**
+** Description: Schedules the task to run after the specified delay and 
+** unshcedules all other tasks. A task must be registered using registerTask()
+** before it can be scheduled.
+**
+** Parameters:	
+** uint16_t		taskID		The unique ID for the task
+** rtc_t		time		Number of ms in the future for the task to run
+** PTASKPARM	p			Pointer to the task parameters, can be NULL
+**
+** Returns:		void 
+**
+******************************************************************************/
+void scheduleTaskExlusive(uint16_t taskID, rtc_t time, bool isPeriodic, PTASKPARM p) {
+	PTASKDESC	td = NULL;
+	int			i;
 
-    clocks_hw->sleep_en0 = CLOCKS_SLEEP_EN0_CLK_RTC_RTC_BITS;
-    clocks_hw->sleep_en1 = 0x0;
+	for (i = 0;i < taskArrayLength;i++) {
+		td = &taskDescs[i];
 
-    uint save = scb_hw->scr;
-    
-    // Enable deep sleep at the proc
-    scb_hw->scr = save | M0PLUS_SCR_SLEEPDEEP_BITS;
-
-    __wfi();
+		if (td->ID == taskID) {
+			td->startTime = getRTCClockCount();
+			td->delay = time;
+			td->scheduledTime = _getScheduledTime(td->startTime, td->delay);
+			td->isScheduled = 1;
+			td->isPeriodic = (uint8_t)isPeriodic;
+			td->pParameter = p;
+		}
+		else {
+			td->startTime = 0;
+			td->scheduledTime = 0;
+			td->isScheduled = 0;
+			td->isPeriodic = false;
+			td->pParameter = NULL;
+		}
+	}
 }
 
 /******************************************************************************

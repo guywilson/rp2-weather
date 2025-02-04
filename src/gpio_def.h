@@ -50,6 +50,9 @@
 #define I2C0_POWER_PIN_0            18
 
 #define DEBUG_ENABLE_PIN            12
+#define SCOPE_DEBUG_PIN_0           20
+#define SCOPE_DEBUG_PIN_1           21
+#define SCOPE_DEBUG_PIN_2           22
 
 #define ONBAORD_LED_PIN             PICO_DEFAULT_LED_PIN
 

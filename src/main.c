@@ -34,10 +34,6 @@
 
 #define ENABLE_BATTERY_MONITOR
 
-void _sleepPowerDown(void) {
-	watchdog_disable();
-}
-
 void taskDebugCheck(PTASKPARM p) {
     if (isDebugActive()) {
 		initSerial(uart0);
@@ -57,7 +53,7 @@ static void setup(void) {
 	*/
 	watchdog_disable();
 
-    set_sys_clock_khz(25000, true);
+    set_sys_clock_khz(33000, true);
 
 	setupLEDPin();
     setupDebugPin();
@@ -116,7 +112,7 @@ int main(void) {
 #ifdef ENABLE_BATTERY_MONITOR
     scheduleTask(
             TASK_BATTERY_MONITOR,
-            rtc_val_min(5),
+            rtc_val_min(1),
             false,
             NULL);
 #endif
