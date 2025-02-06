@@ -112,7 +112,7 @@ int main(void) {
 #ifdef ENABLE_BATTERY_MONITOR
     scheduleTask(
             TASK_BATTERY_MONITOR,
-            rtc_val_sec(10),
+            rtc_val_sec(15),
             true,
             NULL);
 #endif
