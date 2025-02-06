@@ -115,12 +115,14 @@ void taskBatteryMonitor(PTASKPARM p) {
         gpio_set_dir(SCOPE_DEBUG_PIN_1, true);
         gpio_set_dir(SCOPE_DEBUG_PIN_2, true);
 
+        spi_init(spi0, 5000000);
+
         gpio_put(SCOPE_DEBUG_PIN_0, 1);
 
         /*
         ** Power down the device in case we're mid send...
         */
-        // nRF24L01_powerDown(spi0);
+        nRF24L01_powerDown(spi0);
         gpio_put(SCOPE_DEBUG_PIN_0, 0);
 
         sleep_ms(100);
