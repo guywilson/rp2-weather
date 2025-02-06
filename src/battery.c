@@ -108,7 +108,13 @@ void taskBatteryMonitor(PTASKPARM p) {
         watchdog_disable();
 
         gpio_init(SCOPE_DEBUG_PIN_0);
+        gpio_init(SCOPE_DEBUG_PIN_1);
+        gpio_init(SCOPE_DEBUG_PIN_2);
+
         gpio_set_dir(SCOPE_DEBUG_PIN_0, true);
+        gpio_set_dir(SCOPE_DEBUG_PIN_1, true);
+        gpio_set_dir(SCOPE_DEBUG_PIN_2, true);
+
         gpio_put(SCOPE_DEBUG_PIN_0, 1);
 
         /*
@@ -119,19 +125,19 @@ void taskBatteryMonitor(PTASKPARM p) {
 
         sleep_ms(100);
 
-        gpio_put(SCOPE_DEBUG_PIN_0, 1);
+        gpio_put(SCOPE_DEBUG_PIN_1, 1);
         nRF24L01_powerUpTx(spi0);
-        gpio_put(SCOPE_DEBUG_PIN_0, 0);
+        gpio_put(SCOPE_DEBUG_PIN_1, 0);
 
         sleep_ms(200);
 
-        gpio_put(SCOPE_DEBUG_PIN_0, 1);
+        gpio_put(SCOPE_DEBUG_PIN_2, 1);
         pSleep->rawBatteryVolts = pWeather->rawBatteryVolts;
         pSleep->sleepHours = (uint16_t)sleepPeriod;
 
         memcpy(buffer, pSleep, sizeof(sleep_packet_t));
         nRF24L01_transmit_buffer(spi0, buffer, sizeof(sleep_packet_t), false);
-        gpio_put(SCOPE_DEBUG_PIN_0, 0);
+        gpio_put(SCOPE_DEBUG_PIN_2, 0);
 
         sleep_ms(200);
 
