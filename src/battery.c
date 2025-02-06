@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "hardware/adc.h"
 #include "hardware/rtc.h"
@@ -52,11 +53,9 @@ void wakeUp(void) {
 }
 
 void taskBatteryMonitor(PTASKPARM p) {
-    static int                  state = STATE_START;
     static int                  runCount = 0;
     static int                  sleepPeriod = SLEEP_PERIOD_OFF;
     uint8_t                     buffer[32];
-    rtc_t                       delay = rtc_val_sec(10);
     sleep_packet_t *            pSleep;
     weather_packet_t *          pWeather;
     int                         i;
@@ -93,7 +92,7 @@ void taskBatteryMonitor(PTASKPARM p) {
     sleepPeriod = SLEEP_PERIOD_1H;
 #endif
 
-    if (sleepPeriod != SLEEP_PERIOD_OFF) {
+    if (sleepPeriod) {
         /*
         ** Steps we need to take:
         **
@@ -104,138 +103,118 @@ void taskBatteryMonitor(PTASKPARM p) {
         ** 5. Turn off all GPIO pins (including onboard LED)
         ** 6. Setup the RTC and set a timer for the sleep period
         ** 7. Go to sleep zzzzzzzz
-        **
-        ** This task is run as exclusive, all other tasks are unscheduled...
         */
-        switch (state) {
-            case STATE_START:
-                watchdog_disable();
 
-                /*
-                ** Power down the device in case we're mid send...
-                */
-                nRF24L01_powerDown(spi0);
+        watchdog_disable();
 
-                state = STATE_RADIO_POWER_UP;
-                delay = rtc_val_sec(5);
-                break;
+        gpio_init(SCOPE_DEBUG_PIN_0);
+        gpio_set_dir(SCOPE_DEBUG_PIN_0, true);
+        gpio_put(SCOPE_DEBUG_PIN_0, 1);
 
-            case STATE_RADIO_POWER_UP:
-                gpio_init(SCOPE_DEBUG_PIN_0);
-                gpio_set_dir(SCOPE_DEBUG_PIN_0, true);
+        /*
+        ** Power down the device in case we're mid send...
+        */
+        // nRF24L01_powerDown(spi0);
+        gpio_put(SCOPE_DEBUG_PIN_0, 0);
 
-                gpio_put(SCOPE_DEBUG_PIN_0, 1);
+        sleep_ms(100);
 
-                nRF24L01_powerUpTx(spi0);
+        gpio_put(SCOPE_DEBUG_PIN_0, 1);
+        nRF24L01_powerUpTx(spi0);
+        gpio_put(SCOPE_DEBUG_PIN_0, 0);
 
-                state = STATE_RADIO_SEND_PACKET;
-                delay = rtc_val_ms(200);
-                break;
+        sleep_ms(200);
 
-            case STATE_RADIO_SEND_PACKET:
-                gpio_put(SCOPE_DEBUG_PIN_0, 0);
-                
-                pSleep->rawBatteryVolts = pWeather->rawBatteryVolts;
-                pSleep->sleepHours = (uint16_t)sleepPeriod;
+        gpio_put(SCOPE_DEBUG_PIN_0, 1);
+        pSleep->rawBatteryVolts = pWeather->rawBatteryVolts;
+        pSleep->sleepHours = (uint16_t)sleepPeriod;
 
-                memcpy(buffer, pSleep, sizeof(sleep_packet_t));
-                nRF24L01_transmit_buffer(spi0, buffer, sizeof(sleep_packet_t), false);
-                
-                state = STATE_RADIO_FINISH;
-                delay = rtc_val_ms(200);
-                break;
+        memcpy(buffer, pSleep, sizeof(sleep_packet_t));
+        nRF24L01_transmit_buffer(spi0, buffer, sizeof(sleep_packet_t), false);
+        gpio_put(SCOPE_DEBUG_PIN_0, 0);
 
-            case STATE_RADIO_FINISH:
-                gpio_put(SCOPE_DEBUG_PIN_0, 1);
-                
-                nRF24L01_powerDown(spi0);
+        sleep_ms(200);
 
-                state = STATE_SLEEP;
-                delay = rtc_val_ms(100);
-                break;
+        gpio_put(SCOPE_DEBUG_PIN_0, 1);
+        nRF24L01_powerDown(spi0);
+        gpio_put(SCOPE_DEBUG_PIN_0, 0);
 
-            case STATE_SLEEP:
-                gpio_put(SCOPE_DEBUG_PIN_0, 0);
-                
-                disableRTC();
+        sleep_ms(100);
 
-                i2c_deinit(i2c0);
-                spi_deinit(spi0);
-                uart_deinit(uart0);
+        gpio_put(SCOPE_DEBUG_PIN_0, 1);
+        disableRTC();
 
-                disablePIO();
+        i2c_deinit(i2c0);
+        spi_deinit(spi0);
+        uart_deinit(uart0);
 
-                /*
-                ** Claim all GPIOs as outputs and drive them all low...
-                */
-                for (i = 0;i < 29;i++) {
-                    gpio_set_function((uint)i, GPIO_FUNC_SIO);
-                }
+        disablePIO();
+        gpio_put(SCOPE_DEBUG_PIN_0, 0);
 
-                gpio_set_dir_out_masked(0x3FFFFFFF);
-                gpio_clr_mask(0x3FFFFFFF);
-
-                /*
-                ** Set the date as midnight 1st Jan 2020...
-                */
-                dt.year = 2020;
-                dt.month = 1;
-                dt.day = 1;
-                dt.dotw = 0;
-                dt.hour = 0;
-                dt.min = 0;
-                dt.sec = 0;
-
-                /*
-                ** Set an alarm...
-                */
-                alarm_dt.year = -1;
-                alarm_dt.month = -1;
-                alarm_dt.dotw = -1;
-                alarm_dt.min = -1;
-                alarm_dt.sec = -1;
-
-                if (sleepPeriod == SLEEP_PERIOD_72H) {
-                    alarm_dt.day = 4;
-                    alarm_dt.hour = -1;
-                }
-                else if (sleepPeriod == SLEEP_PERIOD_24H) {
-                    alarm_dt.day = 2;
-                    alarm_dt.hour = -1;
-                }
-                else if (sleepPeriod == SLEEP_PERIOD_15H) {
-                    alarm_dt.day = -1;
-                    alarm_dt.hour = 15;
-                }
-                else if (sleepPeriod == SLEEP_PERIOD_1H) {
-                    alarm_dt.day = -1;
-                    alarm_dt.hour = 1;
-                }
-
-                rtc_init();
-                rtc_set_datetime(&dt);
-                rtc_set_alarm(&alarm_dt, wakeUp);
-
-                clocks_hw->sleep_en0 = CLOCKS_SLEEP_EN0_CLK_RTC_RTC_BITS;
-                clocks_hw->sleep_en1 = 0x0;
-
-                uint save = scb_hw->scr;
-                
-                // Enable deep sleep at the proc
-                scb_hw->scr = save | M0PLUS_SCR_SLEEPDEEP_BITS;
-
-                /*
-                ** Now we can go to sleep zzzzzzzz
-                */
-                __wfi();
-                break;
+        /*
+        ** Claim all GPIOs as outputs and drive them all low...
+        */
+        for (i = 0;i < 29;i++) {
+            gpio_set_function((uint)i, GPIO_FUNC_SIO);
         }
 
-        scheduleTaskExlusive(TASK_BATTERY_MONITOR, delay, false, NULL);
-        return;
-    }
+        gpio_set_dir_out_masked(0x3FFFFFFF);
+        gpio_clr_mask(0x3FFFFFFF);
 
-    scheduleTask(TASK_BATTERY_MONITOR, delay, false, NULL);
+        /*
+        ** Set the date as midnight 1st Jan 2020...
+        */
+        dt.year = 2020;
+        dt.month = 1;
+        dt.day = 1;
+        dt.dotw = 0;
+        dt.hour = 0;
+        dt.min = 0;
+        dt.sec = 0;
+
+        /*
+        ** Set an alarm...
+        */
+        alarm_dt.year = -1;
+        alarm_dt.month = -1;
+        alarm_dt.dotw = -1;
+        alarm_dt.min = -1;
+        alarm_dt.sec = -1;
+
+        if (sleepPeriod == SLEEP_PERIOD_72H) {
+            alarm_dt.day = 4;
+            alarm_dt.hour = -1;
+        }
+        else if (sleepPeriod == SLEEP_PERIOD_24H) {
+            alarm_dt.day = 2;
+            alarm_dt.hour = -1;
+        }
+        else if (sleepPeriod == SLEEP_PERIOD_15H) {
+            alarm_dt.day = -1;
+            alarm_dt.hour = 15;
+        }
+        else if (sleepPeriod == SLEEP_PERIOD_1H) {
+            alarm_dt.day = -1;
+            alarm_dt.hour = 1;
+        }
+
+        rtc_init();
+        rtc_set_datetime(&dt);
+        rtc_set_alarm(&alarm_dt, wakeUp);
+
+        clocks_hw->sleep_en0 = CLOCKS_SLEEP_EN0_CLK_RTC_RTC_BITS;
+        clocks_hw->sleep_en1 = 0x0;
+
+        uint save = scb_hw->scr;
+        
+        // Enable deep sleep at the proc
+        scb_hw->scr = save | M0PLUS_SCR_SLEEPDEEP_BITS;
+
+        /*
+        ** Now we can go to sleep zzzzzzzz
+        */
+        __wfi();
+    }
 
     runCount++;
 }
