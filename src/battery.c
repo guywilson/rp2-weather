@@ -58,7 +58,6 @@ void taskBatteryMonitor(PTASKPARM p) {
     uint8_t                     buffer[32];
     sleep_packet_t *            pSleep;
     weather_packet_t *          pWeather;
-    int                         i;
     
     pWeather = getWeatherPacket();
     pSleep = getSleepPacket();
@@ -127,25 +126,25 @@ void taskBatteryMonitor(PTASKPARM p) {
 
         sleep_ms(100);
 
-        gpio_put(SCOPE_DEBUG_PIN_1, 1);
+        gpio_put(SCOPE_DEBUG_PIN_0, 1);
         nRF24L01_powerUpTx(spi0);
-        gpio_put(SCOPE_DEBUG_PIN_1, 0);
+        gpio_put(SCOPE_DEBUG_PIN_0, 0);
 
         sleep_ms(200);
 
-        gpio_put(SCOPE_DEBUG_PIN_2, 1);
+        gpio_put(SCOPE_DEBUG_PIN_1, 1);
         pSleep->rawBatteryVolts = pWeather->rawBatteryVolts;
         pSleep->sleepHours = (uint16_t)sleepPeriod;
 
         memcpy(buffer, pSleep, sizeof(sleep_packet_t));
         nRF24L01_transmit_buffer(spi0, buffer, sizeof(sleep_packet_t), false);
-        gpio_put(SCOPE_DEBUG_PIN_2, 0);
+        gpio_put(SCOPE_DEBUG_PIN_1, 0);
 
         sleep_ms(200);
 
-        gpio_put(SCOPE_DEBUG_PIN_0, 1);
+        gpio_put(SCOPE_DEBUG_PIN_2, 1);
         nRF24L01_powerDown(spi0);
-        gpio_put(SCOPE_DEBUG_PIN_0, 0);
+        gpio_put(SCOPE_DEBUG_PIN_2, 0);
 
         sleep_ms(100);
 
@@ -158,16 +157,6 @@ void taskBatteryMonitor(PTASKPARM p) {
 
         disablePIO();
         gpio_put(SCOPE_DEBUG_PIN_0, 0);
-
-        /*
-        ** Claim all GPIOs as outputs and drive them all low...
-        */
-        for (i = 0;i < 29;i++) {
-            gpio_set_function((uint)i, GPIO_FUNC_SIO);
-        }
-
-        gpio_set_dir_out_masked(0x3FFFFFFF);
-        gpio_clr_mask(0x3FFFFFFF);
 
         /*
         ** Set the date as midnight 1st Jan 2020...
