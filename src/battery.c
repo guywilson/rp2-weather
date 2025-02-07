@@ -26,7 +26,7 @@
 #include "watchdog.h"
 #include "nRF24L01.h"
 #include "battery.h"
-#include "gpio_def.h"
+#include "gpio_cntrl.h"
 
 #define STATE_START                         0x0001
 #define STATE_RADIO_POWER_UP                0x0100
@@ -163,6 +163,8 @@ void taskBatteryMonitor(PTASKPARM p) {
 
                 disablePIO();
 
+                deInitGPOIsAndDebugPins();
+
                 /*
                 ** Set the date as midnight 1st Jan 2020...
                 */
@@ -197,7 +199,8 @@ void taskBatteryMonitor(PTASKPARM p) {
                 }
                 else if (sleepPeriod == SLEEP_PERIOD_1H) {
                     alarm_dt.day = -1;
-                    alarm_dt.hour = 1;
+                    alarm_dt.hour = -1;
+                    alarm_dt.min = 1;
                 }
 
                 rtc_init();

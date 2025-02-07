@@ -113,7 +113,7 @@ int main(void) {
     scheduleTask(
             TASK_BATTERY_MONITOR,
             rtc_val_sec(15),
-            true,
+            false,
             NULL);
 #endif
 

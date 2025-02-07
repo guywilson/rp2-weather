@@ -66,7 +66,8 @@ add_executable(
         src/heartbeat.c
         src/battery.c
         src/utils.c
-        src/watchdog.c)
+        src/watchdog.c
+        src/gpio_cntrl.c)
 
     # # Disable SDK alarm support for this lowlevel example
     set(PICO_TIME_DEFAULT_ALARM_POOL_DISABLED 1)
