@@ -13,9 +13,11 @@
 #include "nRF24L01.h"
 #include "watchdog.h"
 
+#define STATE_START                         0x0001
 #define STATE_RADIO_TX_POWERUP              0x0100
 #define STATE_RADIO_TX_SEND                 0x0200
 #define STATE_RADIO_TX_FINISH               0x0300
+#define STATE_END                           0xFF00
 
 static bool         doUpdate = true;
 
@@ -30,7 +32,7 @@ void taskWatchdog(PTASKPARM p) {
 }
 
 void taskWatchdogWakeUp(PTASKPARM p) {
-    static int          state = STATE_RADIO_TX_POWERUP;
+    static int          state = STATE_START;
     rtc_t               delay;
     watchdog_packet_t * pWatchdog;
     uint8_t             buffer[32];
@@ -38,11 +40,18 @@ void taskWatchdogWakeUp(PTASKPARM p) {
     pWatchdog = getWatchdogPacket();
 
     switch (state) {
+        case STATE_START:
+            spi_init(spi0, 5000000);
+
+            state = STATE_RADIO_TX_POWERUP;
+            delay = rtc_val_ms(200);
+            break;
+
         case STATE_RADIO_TX_POWERUP:
             nRF24L01_powerUpTx(spi0);
 
             state = STATE_RADIO_TX_SEND;
-            delay = rtc_val_ms(150);
+            delay = rtc_val_ms(200);
             break;
 
         case STATE_RADIO_TX_SEND:
@@ -50,11 +59,19 @@ void taskWatchdogWakeUp(PTASKPARM p) {
             nRF24L01_transmit_buffer(spi0, buffer, sizeof(watchdog_packet_t), false);
             
             state = STATE_RADIO_TX_FINISH;
-            delay = rtc_val_ms(125);
+            delay = rtc_val_ms(200);
             break;
 
         case STATE_RADIO_TX_FINISH:
             nRF24L01_powerDown(spi0);
+            
+            state = STATE_END;
+            delay = rtc_val_ms(200);
+            break;
+
+        case STATE_END:
+            spi_deinit(spi0);
+            state = STATE_START;
             return;
     }
 

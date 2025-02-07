@@ -3,7 +3,9 @@
 #ifndef __INCL_GPIO_CNTRL
 #define __INCL_GPIO_CNTRL
 
-void deInitGPOIs(void);
-void deInitGPOIsAndDebugPins(void);
+void initGPIOs(void);
+void initDebugPins(void);
+void deInitGPIOs(void);
+void deInitGPIOsAndDebugPins(void);
 
 #endif

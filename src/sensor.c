@@ -58,39 +58,6 @@ int nullSetup(i2c_inst_t * i2c) {
     return 0;
 }
 
-static void initGPOIs(void) {
-    /*
-    ** I2C bus pins...
-    */
-    gpio_set_function(I2C0_SDA_ALT_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(I2C0_SLK_ALT_PIN, GPIO_FUNC_I2C);
-
-    /*
-    ** SPI CSn
-    */
-    gpio_init(NRF24L01_SPI_PIN_CSN);
-    gpio_set_dir(NRF24L01_SPI_PIN_CSN, true);
-    gpio_put(NRF24L01_SPI_PIN_CSN, true);
-
-    /*
-    ** SPI CE
-    */
-    gpio_init(NRF24L01_SPI_PIN_CE);
-    gpio_set_dir(NRF24L01_SPI_PIN_CE, true);
-    gpio_put(NRF24L01_SPI_PIN_CE, false);
-
-    gpio_set_function(NRF24L01_SPI_PIN_MOSI, GPIO_FUNC_SPI);	// SPI TX
-    gpio_set_function(NRF24L01_SPI_PIN_MISO, GPIO_FUNC_SPI);	// SPI RX
-    gpio_set_function(NRF24L01_SPI_PIN_SCK, GPIO_FUNC_SPI);	    // SPI SCK
-
-    gpio_init(I2C0_POWER_PIN_0);
-    gpio_set_dir(I2C0_POWER_PIN_0, GPIO_OUT);
-
-    gpio_set_drive_strength(I2C0_POWER_PIN_0, GPIO_DRIVE_STRENGTH_4MA);
-
-    gpio_put(I2C0_POWER_PIN_0, true);
-}
-
 static void setPacketNumber(weather_packet_t * p) {
     static uint32_t             packetNum = 0;
 
@@ -143,7 +110,7 @@ void taskI2CSensor(PTASKPARM p) {
             */
 
         case STATE_I2C_INIT:
-            initGPOIs();
+            initGPIOs();
 
             lgLogDebug("I2C Init2");
 
@@ -357,7 +324,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             i2c_deinit(i2c0);
             spi_deinit(spi0);
-            deInitGPOIs();
+            deInitGPIOs();
 
             if (isDebugActive()) {
                 delay = rtc_val_sec(53);

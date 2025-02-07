@@ -116,14 +116,8 @@ void taskBatteryMonitor(PTASKPARM p) {
                 break;
 
             case STATE_RADIO_POWER_UP:
-                gpio_init(SCOPE_DEBUG_PIN_0);
-                gpio_init(SCOPE_DEBUG_PIN_1);
-                gpio_init(SCOPE_DEBUG_PIN_2);
-
-                gpio_set_dir(SCOPE_DEBUG_PIN_0, true);
-                gpio_set_dir(SCOPE_DEBUG_PIN_1, true);
-                gpio_set_dir(SCOPE_DEBUG_PIN_2, true);
-
+                initDebugPins();
+                
                 gpio_put(SCOPE_DEBUG_PIN_0, 1);
                 nRF24L01_powerUpTx(spi0);
                 gpio_put(SCOPE_DEBUG_PIN_0, 0);
@@ -163,7 +157,7 @@ void taskBatteryMonitor(PTASKPARM p) {
 
                 disablePIO();
 
-                deInitGPOIsAndDebugPins();
+                deInitGPIOsAndDebugPins();
 
                 /*
                 ** Set the date as midnight 1st Jan 2020...

@@ -5,7 +5,50 @@
 #include "hardware/gpio.h"
 #include "gpio_def.h"
 
-void deInitGPOIs(void) {
+void initGPIOs(void) {
+    /*
+    ** I2C bus pins...
+    */
+    gpio_set_function(I2C0_SDA_ALT_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(I2C0_SLK_ALT_PIN, GPIO_FUNC_I2C);
+
+    /*
+    ** SPI CSn
+    */
+    gpio_init(NRF24L01_SPI_PIN_CSN);
+    gpio_set_dir(NRF24L01_SPI_PIN_CSN, true);
+    gpio_put(NRF24L01_SPI_PIN_CSN, true);
+
+    /*
+    ** SPI CE
+    */
+    gpio_init(NRF24L01_SPI_PIN_CE);
+    gpio_set_dir(NRF24L01_SPI_PIN_CE, true);
+    gpio_put(NRF24L01_SPI_PIN_CE, false);
+
+    gpio_set_function(NRF24L01_SPI_PIN_MOSI, GPIO_FUNC_SPI);	// SPI TX
+    gpio_set_function(NRF24L01_SPI_PIN_MISO, GPIO_FUNC_SPI);	// SPI RX
+    gpio_set_function(NRF24L01_SPI_PIN_SCK, GPIO_FUNC_SPI);	    // SPI SCK
+
+    gpio_init(I2C0_POWER_PIN_0);
+    gpio_set_dir(I2C0_POWER_PIN_0, GPIO_OUT);
+
+    gpio_set_drive_strength(I2C0_POWER_PIN_0, GPIO_DRIVE_STRENGTH_4MA);
+
+    gpio_put(I2C0_POWER_PIN_0, true);
+}
+
+void initDebugPins(void) {
+    gpio_init(SCOPE_DEBUG_PIN_0);
+    gpio_init(SCOPE_DEBUG_PIN_1);
+    gpio_init(SCOPE_DEBUG_PIN_2);
+
+    gpio_set_dir(SCOPE_DEBUG_PIN_0, true);
+    gpio_set_dir(SCOPE_DEBUG_PIN_1, true);
+    gpio_set_dir(SCOPE_DEBUG_PIN_2, true);
+}
+
+void deInitGPIOs(void) {
     /*
     ** Claim GPIOs as outputs and drive them all low...
     */
@@ -34,8 +77,8 @@ void deInitGPOIs(void) {
     gpio_clr_mask(pinMask);
 }
 
-void deInitGPOIsAndDebugPins(void) {
-    deInitGPOIs();
+void deInitGPIOsAndDebugPins(void) {
+    deInitGPIOs();
 
     /*
     ** Claim GPIOs as outputs and drive them all low...
