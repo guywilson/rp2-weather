@@ -40,7 +40,7 @@
 #define SLEEP_PERIOD_24H                   24
 #define SLEEP_PERIOD_72H                   72
 
-#define DEBUG_SLEEP
+//#define DEBUG_SLEEP
 
 static datetime_t           dt;
 static datetime_t           alarm_dt;
@@ -56,6 +56,7 @@ void taskBatteryMonitor(PTASKPARM p) {
     static int                  state = STATE_START;
     static int                  runCount = 0;
     static int                  sleepPeriod = SLEEP_PERIOD_OFF;
+    static uint8_t              lastBatteryPct = 90;
     uint8_t                     buffer[32];
     rtc_t                       delay = rtc_val_sec(10);
     sleep_packet_t *            pSleep;
@@ -92,6 +93,8 @@ void taskBatteryMonitor(PTASKPARM p) {
 #else
     sleepPeriod = SLEEP_PERIOD_1H;
 #endif
+
+    lastBatteryPct = pWeather->rawBatteryPercentage;
 
     if (sleepPeriod) {
         /*
