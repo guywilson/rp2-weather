@@ -112,12 +112,12 @@ void taskBatteryMonitor(PTASKPARM p) {
                 spi_init(spi0, 5000000);
 
                 state = STATE_RADIO_POWER_UP;
-                delay = rtc_val_ms(200);
+                delay = rtc_val_sec(1);
                 break;
 
             case STATE_RADIO_POWER_UP:
                 initDebugPins();
-                
+
                 gpio_put(SCOPE_DEBUG_PIN_0, 1);
                 nRF24L01_powerUpTx(spi0);
                 gpio_put(SCOPE_DEBUG_PIN_0, 0);

@@ -63,7 +63,7 @@ static void setup(void) {
 }
 
 int main(void) {
-    bool            isWatchdogReboot = false;
+    bool isWatchdogReboot = false;
 
 	setup();
 
@@ -132,7 +132,7 @@ int main(void) {
     if (isWatchdogReboot) {
         scheduleTask(
             TASK_WATCHDOG_WAKEUP, 
-            rtc_val_sec(3), 
+            rtc_val_sec(1), 
             false, 
             NULL);
     }

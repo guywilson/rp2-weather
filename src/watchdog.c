@@ -44,7 +44,7 @@ void taskWatchdogWakeUp(PTASKPARM p) {
             spi_init(spi0, 5000000);
 
             state = STATE_RADIO_TX_POWERUP;
-            delay = rtc_val_ms(200);
+            delay = rtc_val_sec(1);
             break;
 
         case STATE_RADIO_TX_POWERUP:
