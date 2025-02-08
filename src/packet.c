@@ -34,7 +34,7 @@ sleep_packet_t * getSleepPacket(void) {
 watchdog_packet_t * getWatchdogPacket(void) {
     static watchdog_packet_t     wp;
 
-    wp.packetID = PACKET_ID_WEATHER;
+    wp.packetID = PACKET_ID_WATCHDOG;
     
     return &wp;
 }
