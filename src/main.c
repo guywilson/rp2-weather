@@ -63,19 +63,12 @@ static void setup(void) {
 }
 
 int main(void) {
-    bool isWatchdogReboot = false;
-
 	setup();
 
-	if (watchdog_caused_reboot()) {
-        isWatchdogReboot = true;
-	}
-
-	initScheduler(8);
+	initScheduler(7);
 
 	registerTask(TASK_HEARTBEAT, &HeartbeatTask);
 	registerTask(TASK_WATCHDOG, &taskWatchdog);
-	registerTask(TASK_WATCHDOG_WAKEUP, &taskWatchdogWakeUp);
 	registerTask(TASK_I2C_SENSOR, &taskI2CSensor);
     registerTask(TASK_ANEMOMETER, &taskAnemometer);
     registerTask(TASK_RAIN_GAUGE, &taskRainGuage);
@@ -128,14 +121,6 @@ int main(void) {
 			rtc_val_sec(1), 
             true, 
 			NULL);
-
-    if (isWatchdogReboot) {
-        scheduleTask(
-            TASK_WATCHDOG_WAKEUP, 
-            rtc_val_sec(1), 
-            false, 
-            NULL);
-    }
 
 	/*
 	** Enable the watchdog, it will reset the device in 3s unless
