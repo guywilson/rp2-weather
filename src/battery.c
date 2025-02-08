@@ -6,6 +6,8 @@
 
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
+#include "pico/types.h"
+#include "pico/util/datetime.h"
 #include "hardware/adc.h"
 #include "hardware/rtc.h"
 #include "hardware/i2c.h"
