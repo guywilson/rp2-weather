@@ -78,6 +78,14 @@ static bool i2cIsDeviceActive(i2c_inst_t * i2c, uint address) {
     return true;
 }
 
+void i2cBusPowerUp(void) {
+    gpio_put(I2C0_POWER_PIN_0, true);
+}
+
+void i2cBusPowerDown(void) {
+    gpio_put(I2C0_POWER_PIN_0, false);
+}
+
 bool i2cGetDeviceState(i2c_inst_t * i2c, uint address) {
     i2c_device_t *          device;
 

@@ -109,6 +109,7 @@ void taskBatteryMonitor(PTASKPARM p) {
             case STATE_START:
                 watchdog_disable();
 
+                initGPIOs();
                 spi_init(spi0, 5000000);
 
                 state = STATE_RADIO_POWER_UP;
@@ -154,6 +155,7 @@ void taskBatteryMonitor(PTASKPARM p) {
                 i2c_deinit(i2c0);
                 spi_deinit(spi0);
                 uart_deinit(uart0);
+                deInitGPIOs();
 
                 disablePIO();
 

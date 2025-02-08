@@ -34,8 +34,6 @@ void initGPIOs(void) {
     gpio_set_dir(I2C0_POWER_PIN_0, GPIO_OUT);
 
     gpio_set_drive_strength(I2C0_POWER_PIN_0, GPIO_DRIVE_STRENGTH_4MA);
-
-    gpio_put(I2C0_POWER_PIN_0, true);
 }
 
 void initDebugPins(void) {

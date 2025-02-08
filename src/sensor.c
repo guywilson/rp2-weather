@@ -126,6 +126,7 @@ void taskI2CSensor(PTASKPARM p) {
             lgLogDebug("I2C0 Setup");
 
             i2c_bus_setup(i2c0);
+            i2cBusPowerUp();
 
             state = STATE_READ_TEMP;
             delay = rtc_val_ms(200);
@@ -289,6 +290,8 @@ void taskI2CSensor(PTASKPARM p) {
             break;
 
         case STATE_SEND_BEGIN:
+            i2cBusPowerDown();
+            
             nRF24L01_powerUpTx(spi0);
 
             setPacketNumber(pWeather);

@@ -19,6 +19,9 @@ typedef struct {
 }
 i2c_device_t;
 
+void i2cBusPowerUp(void);
+void i2cBusPowerDown(void);
+
 bool    i2cGetDeviceState(i2c_inst_t * i2c, uint address);
 int     i2c_bus_open(i2c_inst_t * i2c, int numDevices);
 int     i2c_bus_close(i2c_inst_t * i2c);

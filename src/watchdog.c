@@ -11,6 +11,7 @@
 #include "packet.h"
 #include "sensor.h"
 #include "nRF24L01.h"
+#include "gpio_cntrl.h"
 #include "watchdog.h"
 
 #define STATE_START                         0x0001
@@ -41,6 +42,7 @@ void taskWatchdogWakeUp(PTASKPARM p) {
 
     switch (state) {
         case STATE_START:
+            initGPIOs();
             spi_init(spi0, 5000000);
 
             state = STATE_RADIO_TX_POWERUP;
@@ -71,6 +73,8 @@ void taskWatchdogWakeUp(PTASKPARM p) {
 
         case STATE_END:
             spi_deinit(spi0);
+            deInitGPIOs();
+            
             state = STATE_START;
             return;
     }
