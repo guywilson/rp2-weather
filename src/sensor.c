@@ -51,10 +51,10 @@
 
 #define CRC_FAIL_COUNT_LIMIT        3
 
-#define MESSAGE_DELAY_DEBUG         60000               // 1 minute
-#define MESSAGE_DELAY_PWR_STANDARD  600000              // 10 minutes
-#define MESSAGE_DELAY_PWR_OK        1200000             // 20 minutes
-#define MESSAGE_DELAY_PWR_MEDIUM    3600000             // 1 hour
+static const uint MESSAGE_DELAY_DEBUG_MS =      (1 * 60 * 1000);    // 1 minute
+static const uint MESSAGE_DELAY_STD_MS =        (10 * 60 * 1000);   // 10 minutes
+static const uint MESSAGE_DELAY_MED_PWR_MS =    (20 * 60 * 1000);   // 20 minutes
+static const uint MESSAGE_DELAY_LOW_PWR_MS =    (60 * 60 * 1000);   // 1 hour
 
 static uint8_t              buffer[32];
 static char                 szBuffer[128];
@@ -349,17 +349,17 @@ void taskI2CSensor(PTASKPARM p) {
             deInitGPIOs();
 
             if (isDebugActive()) {
-                delay = rtc_val_ms(MESSAGE_DELAY_DEBUG - msDelayTotal);
+                delay = rtc_val_ms(MESSAGE_DELAY_DEBUG_MS - msDelayTotal);
             }
             else {
                 if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_MEDIUM) {
-                    delay = rtc_val_ms(MESSAGE_DELAY_PWR_MEDIUM - msDelayTotal);
+                    delay = rtc_val_ms(MESSAGE_DELAY_LOW_PWR_MS - msDelayTotal);
                 }
                 else if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_OK) {
-                    delay = rtc_val_ms(MESSAGE_DELAY_PWR_OK - msDelayTotal);
+                    delay = rtc_val_ms(MESSAGE_DELAY_MED_PWR_MS - msDelayTotal);
                 }
                 else {
-                    delay = rtc_val_ms(MESSAGE_DELAY_PWR_STANDARD - msDelayTotal);
+                    delay = rtc_val_ms(MESSAGE_DELAY_STD_MS - msDelayTotal);
                 }
             }
 
