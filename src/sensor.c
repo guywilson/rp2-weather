@@ -51,6 +51,11 @@
 
 #define CRC_FAIL_COUNT_LIMIT        3
 
+#define MESSAGE_DELAY_DEBUG         (60000)
+#define MESSAGE_DELAY_PWR_STANDARD  (10 * 60000)
+#define MESSAGE_DELAY_PWR_OK        (20 * 60000)
+#define MESSAGE_DELAY_PWR_MEDIUM    (60 * 60000)
+
 static uint8_t              buffer[32];
 static char                 szBuffer[128];
 
@@ -85,6 +90,7 @@ static int registerSensorsI2C0(void) {
 
 void taskI2CSensor(PTASKPARM p) {
     static int                  state = STATE_START;
+    static rtc_t                msDelayTotal = 0;
     static weather_packet_t     lastPacket;
     int                         i;
     int                         count = 0;
@@ -118,8 +124,9 @@ void taskI2CSensor(PTASKPARM p) {
             spi_init(spi0, 5000000);
             nRF24L01_setup(spi0);
 
-            delay = rtc_val_sec(1);
             state = STATE_SETUP_I2C0;
+            delay = rtc_val_sec(1);
+            msDelayTotal += delay;
             break;
 
         case STATE_SETUP_I2C0:
@@ -129,7 +136,8 @@ void taskI2CSensor(PTASKPARM p) {
             i2cBusPowerUp();
 
             state = STATE_READ_TEMP;
-            delay = rtc_val_ms(200);
+            delay = rtc_val_ms(500);
+            msDelayTotal += delay;
             break;
 
         case STATE_READ_TEMP:
@@ -148,6 +156,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             state = STATE_READ_HUMIDITY_1;
             delay = rtc_val_ms(500);
+            msDelayTotal += delay;
             break;
 
         case STATE_READ_HUMIDITY_1:
@@ -159,6 +168,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             state = STATE_READ_HUMIDITY_2;
             delay = rtc_val_ms(100);
+            msDelayTotal += delay;
             break;
 
         case STATE_READ_HUMIDITY_2:
@@ -177,6 +187,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             state = STATE_READ_PRESSURE_1;
             delay = rtc_val_ms(400);
+            msDelayTotal += delay;
             break;
 
         case STATE_READ_PRESSURE_1:
@@ -186,6 +197,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             state = STATE_READ_PRESSURE_2;
             delay = rtc_val_ms(100);
+            msDelayTotal += delay;
             break;
 
         case STATE_READ_PRESSURE_2:
@@ -198,6 +210,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             state = STATE_READ_PRESSURE_3;
             delay = rtc_val_ms(100);
+            msDelayTotal += delay;
             break;
 
         case STATE_READ_PRESSURE_3:
@@ -224,6 +237,7 @@ void taskI2CSensor(PTASKPARM p) {
 
             state = STATE_READ_BATTERY_VOLTS;
             delay = rtc_val_ms(300);
+            msDelayTotal += delay;
             break;
 
         case STATE_READ_BATTERY_VOLTS:
@@ -243,8 +257,9 @@ void taskI2CSensor(PTASKPARM p) {
                 pWeather->status |= STATUS_BITS_MAX17048_BV_I2C_ERROR;
             }
 
-            delay = rtc_val_ms(500);
             state = STATE_READ_BATTERY_PERCENT;
+            delay = rtc_val_ms(500);
+            msDelayTotal += delay;
             break;
 
         case STATE_READ_BATTERY_PERCENT:
@@ -264,8 +279,9 @@ void taskI2CSensor(PTASKPARM p) {
                 pWeather->status |= STATUS_BITS_MAX17048_BP_I2C_ERROR;
             }
 
-            delay = rtc_val_ms(500);
             state = STATE_READ_BATTERY_CRATE;
+            delay = rtc_val_ms(500);
+            msDelayTotal += delay;
             break;
 
         case STATE_READ_BATTERY_CRATE:
@@ -285,8 +301,9 @@ void taskI2CSensor(PTASKPARM p) {
                 pWeather->status |= STATUS_BITS_MAX17048_BCR_I2C_ERROR;
             }
 
-            delay = rtc_val_ms(200);
             state = STATE_SEND_BEGIN;
+            delay = rtc_val_ms(200);
+            msDelayTotal += delay;
             break;
 
         case STATE_SEND_BEGIN:
@@ -296,8 +313,9 @@ void taskI2CSensor(PTASKPARM p) {
 
             setPacketNumber(pWeather);
 
-            delay = rtc_val_ms(200);
             state = STATE_SEND_PACKET;
+            delay = rtc_val_ms(400);
+            msDelayTotal += delay;
             break;
 
         case STATE_SEND_PACKET:
@@ -316,8 +334,9 @@ void taskI2CSensor(PTASKPARM p) {
 
             nRF24L01_transmit_buffer(spi0, buffer, sizeof(weather_packet_t), false);
 
-            delay = rtc_val_ms(200);
             state = STATE_SEND_FINISH;
+            delay = rtc_val_ms(400);
+            msDelayTotal += delay;
             break;
 
         case STATE_SEND_FINISH:
@@ -330,19 +349,21 @@ void taskI2CSensor(PTASKPARM p) {
             deInitGPIOs();
 
             if (isDebugActive()) {
-                delay = rtc_val_sec(53);
+                delay = rtc_val_ms(MESSAGE_DELAY_DEBUG - msDelayTotal);
             }
             else {
                 if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_MEDIUM) {
-                    delay = rtc_val_hr(1);
+                    delay = rtc_val_ms(MESSAGE_DELAY_PWR_MEDIUM - msDelayTotal);
                 }
                 else if (pWeather->rawBatteryPercentage < BATTERY_PERCENTAGE_OK) {
-                    delay = rtc_val_min(20);
+                    delay = rtc_val_ms(MESSAGE_DELAY_PWR_OK - msDelayTotal);
                 }
                 else {
-                    delay = rtc_val_sec(293);
+                    delay = rtc_val_ms(MESSAGE_DELAY_PWR_STANDARD - msDelayTotal);
                 }
             }
+
+            msDelayTotal = 0;
 
             state = STATE_I2C_INIT;
             break;
