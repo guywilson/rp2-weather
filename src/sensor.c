@@ -125,7 +125,7 @@ void taskI2CSensor(PTASKPARM p) {
             nRF24L01_setup(spi0);
 
             state = STATE_SETUP_I2C0;
-            delay = rtc_val_sec(1);
+            delay = rtc_val_ms(1000);
             msDelayTotal += delay;
             break;
 
