@@ -51,10 +51,10 @@
 
 #define CRC_FAIL_COUNT_LIMIT        3
 
-#define MESSAGE_DELAY_DEBUG         (60000)
-#define MESSAGE_DELAY_PWR_STANDARD  (10 * 60000)
-#define MESSAGE_DELAY_PWR_OK        (20 * 60000)
-#define MESSAGE_DELAY_PWR_MEDIUM    (60 * 60000)
+#define MESSAGE_DELAY_DEBUG         60000               // 1 minute
+#define MESSAGE_DELAY_PWR_STANDARD  600000              // 10 minutes
+#define MESSAGE_DELAY_PWR_OK        1200000             // 20 minutes
+#define MESSAGE_DELAY_PWR_MEDIUM    3600000             // 1 hour
 
 static uint8_t              buffer[32];
 static char                 szBuffer[128];
