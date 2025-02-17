@@ -63,7 +63,7 @@
 /*
 ** RF_SETUP register flags...
 */
-#define NRF24L01_RF_SETUP_DATA_RATE_250KBPS         0x10        // NRF24L01+ only
+#define NRF24L01_RF_SETUP_DATA_RATE_250KBPS         0x20        // NRF24L01+ only
 #define NRF24L01_RF_SETUP_DATA_RATE_1MBPS           0x00
 #define NRF24L01_RF_SETUP_DATA_RATE_2MBPS           0x08
 
