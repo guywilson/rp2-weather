@@ -67,6 +67,12 @@ void pioInit() {
     uint            anemometerOffset = PIO_ANEMOMETER_OFFSET;
     uint            rainGaugeOffset = PIO_RAIN_GAUGE_OFFSET;
 
+    gpio_init(PIO_PIN_ANEMOMETER);
+    gpio_init(PIO_PIN_RAIN_GAUGE);
+    
+    gpio_set_pulls(PIO_PIN_ANEMOMETER, false, true);
+    gpio_set_pulls(PIO_PIN_RAIN_GAUGE, false, true);
+
     pio_add_program_at_offset(pio0, &pulsecount_program, anemometerOffset);
     pio_add_program_at_offset(pio0, &pulsecount_program, rainGaugeOffset);
 
@@ -84,9 +90,6 @@ void pioInit() {
 
     pio_sm_set_consecutive_pindirs(pio0, anemometerSM, PIO_PIN_ANEMOMETER, 1, false);
     pio_sm_set_consecutive_pindirs(pio0, rainGaugeSM, PIO_PIN_RAIN_GAUGE, 1, false);
-
-    pio_gpio_init(pio0, PIO_PIN_ANEMOMETER);
-    pio_gpio_init(pio0, PIO_PIN_RAIN_GAUGE);
 
     sm_config_set_in_shift(&anemometerConfig, false, true, ANEMOMETER_PULSE_COUNT_BIT_SHIFT);
     sm_config_set_in_shift(&rainGaugeConfig, false, true, RAIN_GAUGE_PULSE_COUNT_BIT_SHIFT);
