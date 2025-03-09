@@ -52,7 +52,7 @@
 #define CRC_FAIL_COUNT_LIMIT        3
 
 static const uint MESSAGE_DELAY_DEBUG_MS =      (1 * 60 * 1000);    // 1 minute
-static const uint MESSAGE_DELAY_STD_MS =        (10 * 60 * 1000);   // 10 minutes
+static const uint MESSAGE_DELAY_STD_MS =        (4 * 60 * 1000);    // 4 minutes
 static const uint MESSAGE_DELAY_MED_PWR_MS =    (20 * 60 * 1000);   // 20 minutes
 static const uint MESSAGE_DELAY_LOW_PWR_MS =    (60 * 60 * 1000);   // 1 hour
 
@@ -321,10 +321,12 @@ void taskI2CSensor(PTASKPARM p) {
         case STATE_SEND_PACKET:
             memcpy(buffer, pWeather, sizeof(weather_packet_t));
 
-            for (i = 0;i < sizeof(weather_packet_t); i++) {
-                count += sprintf(&szBuffer[count], "%02X", buffer[i]);
+            if (isDebugActive()) {
+                for (i = 0;i < sizeof(weather_packet_t); i++) {
+                    count += sprintf(&szBuffer[count], "%02X", buffer[i]);
+                }
+                lgLogDebug("txBuffer: %s", szBuffer);
             }
-            lgLogDebug("txBuffer: %s", szBuffer);
 
             /*
             ** Reset the rainfall count so we start counting again
